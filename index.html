@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termux Remote Control - Chrome</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .button-group button {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border: 2px solid #333;
+        }
+
+        .output.error {
+            color: #ff4444;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .file-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+        }
+
+        .file-item {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .file-item:hover {
+            background: #e9ecef;
+        }
+
+        .file-item.dir {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .file-item.file {
+            color: #333;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Termux Remote Control</h1>
+            <p>Control your Termux device directly from Chrome</p>
+        </div>
+
+        <div class="content">
+            <!-- Shell Command Section -->
+            <div class="section">
+                <h2>⚙️ Shell Commands</h2>
+                <div id="shell-status"></div>
+                <div class="input-group">
+                    <label>Enter Command:</label>
+                    <input type="text" id="command-input" placeholder="e.g., ls -la, pwd, df -h" />
+                </div>
+                <button onclick="executeCommand()">Execute Command</button>
+                <div id="command-output" class="output" style="display:none; margin-top: 15px;"></div>
+            </div>
+
+            <!-- File Manager Section -->
+            <div class="section">
+                <h2>📁 File Manager</h2>
+                <div id="file-status"></div>
+                <div class="input-group">
+                    <label>Directory Path:</label>
+                    <input type="text" id="file-path" value="/sdcard" placeholder="/sdcard" />
+                </div>
+                <button onclick="listFiles()">List Files</button>
+                <div id="file-list" class="file-list" style="display:none; margin-top: 15px;"></div>
+            </div>
+
+            <!-- Read File Section -->
+            <div class="section">
+                <h2>📖 Read File</h2>
+                <div id="read-status"></div>
+                <div class="input-group">
+                    <label>File Path:</label>
+                    <input type="text" id="read-path" placeholder="/sdcard/file.txt" />
+                </div>
+                <button onclick="readFile()">Read File</button>
+                <div id="read-output" class="output" style="display:none; margin-top: 15px;"></div>
+            </div>
+
+            <!-- Write File Section -->
+            <div class="section">
+                <h2>✏️ Write File</h2>
+                <div id="write-status"></div>
+                <div class="input-group">
+                    <label>File Path:</label>
+                    <input type="text" id="write-path" placeholder="/sdcard/newfile.txt" />
+                </div>
+                <div class="input-group">
+                    <label>Content:</label>
+                    <textarea id="write-content" placeholder="Enter file content here..."></textarea>
+                </div>
+                <button onclick="writeFile()">Write File</button>
+            </div>
+
+            <!-- System Info Section -->
+            <div class="section">
+                <h2>ℹ️ System Information</h2>
+                <button onclick="getSystemInfo()">Get System Info</button>
+                <div id="info-output" class="output" style="display:none; margin-top: 15px;"></div>
+            </div>
+
+            <!-- Quick Commands -->
+            <div class="section">
+                <h2>⚡ Quick Commands</h2>
+                <div class="button-group">
+                    <button onclick="quickCommand('ls -la')">List Files</button>
+                    <button onclick="quickCommand('pwd')">Current Dir</button>
+                    <button onclick="quickCommand('df -h')">Disk Usage</button>
+                    <button onclick="quickCommand('free -h')">Memory</button>
+                    <button onclick="quickCommand('whoami')">Current User</button>
+                </div>
+                <div id="quick-output" class="output" style="display:none; margin-top: 15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = location.protocol + '//' + location.host + '/api';
+
+        function showStatus(elementId, message, type = 'loading') {
+            const el = document.getElementById(elementId);
+            let icon = '⏳';
+            if (type === 'success') icon = '✅';
+            if (type === 'error') icon = '❌';
+            
+            el.innerHTML = `<div class="status ${type}">${icon} ${message}</div>`;
+        }
+
+        async function executeCommand() {
+            const command = document.getElementById('command-input').value.trim();
+            if (!command) {
+                alert('Please enter a command');
+                return;
+            }
+
+            showStatus('shell-status', 'Executing...', 'loading');
+            
+            try {
+                const response = await fetch(API_BASE + '/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+
+                const data = await response.json();
+                const output = document.getElementById('command-output');
+                
+                if (data.status === 'success') {
+                    showStatus('shell-status', 'Command executed!', 'success');
+                    output.innerHTML = `<strong>$ ${command}</strong>\n${data.output || '(no output)'}${data.error ? '\nSTDERR: ' + data.error : ''}`;
+                } else {
+                    showStatus('shell-status', 'Error: ' + data.error, 'error');
+                    output.innerHTML = `Error: ${data.error}`;
+                }
+                output.style.display = 'block';
+            } catch (err) {
+                showStatus('shell-status', 'Network error: ' + err.message, 'error');
+            }
+        }
+
+        async function listFiles() {
+            const path = document.getElementById('file-path').value.trim();
+            if (!path) {
+                alert('Please enter a directory path');
+                return;
+            }
+
+            showStatus('file-status', 'Loading files...', 'loading');
+            
+            try {
+                const response = await fetch(API_BASE + '/file/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path })
+                });
+
+                const data = await response.json();
+                const fileList = document.getElementById('file-list');
+                
+                if (data.status === 'success') {
+                    showStatus('file-status', `${data.files.length} items found`, 'success');
+                    fileList.innerHTML = data.files.map(f => `
+                        <div class="file-item ${f.is_dir ? 'dir' : 'file'}" onclick="handleFileClick('${f.path}', ${f.is_dir})">
+                            ${f.is_dir ? '📁' : '📄'} ${f.name}
+                        </div>
+                    `).join('');
+                } else {
+                    showStatus('file-status', 'Error: ' + data.error, 'error');
+                    fileList.innerHTML = `<div style="padding: 10px; color: red;">Error: ${data.error}</div>`;
+                }
+                fileList.style.display = 'block';
+            } catch (err) {
+                showStatus('file-status', 'Network error: ' + err.message, 'error');
+            }
+        }
+
+        function handleFileClick(path, isDir) {
+            if (isDir) {
+                document.getElementById('file-path').value = path;
+                listFiles();
+            } else {
+                document.getElementById('read-path').value = path;
+            }
+        }
+
+        async function readFile() {
+            const path = document.getElementById('read-path').value.trim();
+            if (!path) {
+                alert('Please enter a file path');
+                return;
+            }
+
+            showStatus('read-status', 'Reading file...', 'loading');
+            
+            try {
+                const response = await fetch(API_BASE + '/file/read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path })
+                });
+
+                const data = await response.json();
+                const output = document.getElementById('read-output');
+                
+                if (data.status === 'success') {
+                    showStatus('read-status', 'File read successfully!', 'success');
+                    output.innerHTML = data.content || '(empty file)';
+                } else {
+                    showStatus('read-status', 'Error: ' + data.error, 'error');
+                    output.innerHTML = `Error: ${data.error}`;
+                }
+                output.style.display = 'block';
+            } catch (err) {
+                showStatus('read-status', 'Network error: ' + err.message, 'error');
+            }
+        }
+
+        async function writeFile() {
+            const path = document.getElementById('write-path').value.trim();
+            const content = document.getElementById('write-content').value;
+            
+            if (!path) {
+                alert('Please enter a file path');
+                return;
+            }
+
+            showStatus('write-status', 'Writing file...', 'loading');
+            
+            try {
+                const response = await fetch(API_BASE + '/file/write', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path, content })
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showStatus('write-status', 'File written successfully!', 'success');
+                    document.getElementById('write-path').value = '';
+                    document.getElementById('write-content').value = '';
+                } else {
+                    showStatus('write-status', 'Error: ' + data.error, 'error');
+                }
+            } catch (err) {
+                showStatus('write-status', 'Network error: ' + err.message, 'error');
+            }
+        }
+
+        async function getSystemInfo() {
+            showStatus('info-status', 'Getting system info...', 'loading');
+            
+            try {
+                const response = await fetch(API_BASE + '/info');
+                const data = await response.json();
+                const output = document.getElementById('info-output');
+                
+                if (data.status === 'success') {
+                    showStatus('info-status', 'System info retrieved!', 'success');
+                    output.innerHTML = `System: ${data.system}\n\nHome: ${data.home}\n\nCurrent Dir: ${data.current_dir}\n\nPython: ${data.python_version}`;
+                } else {
+                    showStatus('info-status', 'Error: ' + data.error, 'error');
+                }
+                output.style.display = 'block';
+            } catch (err) {
+                showStatus('info-status', 'Network error: ' + err.message, 'error');
+            }
+        }
+
+        async function quickCommand(cmd) {
+            document.getElementById('command-input').value = cmd;
+            const output = document.getElementById('quick-output');
+            output.innerHTML = '<span class="spinner"></span> Executing...';
+            output.style.display = 'block';
+            
+            try {
+                const response = await fetch(API_BASE + '/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    output.innerHTML = `<strong>$ ${cmd}</strong>\n${data.output}`;
+                } else {
+                    output.innerHTML = `Error: ${data.error}`;
+                    output.classList.add('error');
+                }
+            } catch (err) {
+                output.innerHTML = `Network error: ${err.message}`;
+                output.classList.add('error');
+            }
+        }
+
+        // Keyboard shortcut: Enter to execute command
+        document.getElementById('command-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') executeCommand();
+        });
+    </script>
+</body>
+</html>
