@@ -10,6 +10,9 @@ import subprocess
 import json
 import os
 import sys
+import gzip
+from functools import wraps
+from datetime import datetime, timedelta
 
 app = flask.Flask(__name__)
 CORS(app)
@@ -18,10 +21,26 @@ CORS(app)
 HOST = '0.0.0.0'
 PORT = 5000
 
+def gzip_response(f):
+    """Decorator to compress response with gzip"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        response = flask.make_response(f(*args, **kwargs))
+        if 'Content-Encoding' not in response.headers:
+            response.headers['Content-Encoding'] = 'gzip'
+            response.data = gzip.compress(response.data)
+        return response
+    return decorated
+
 @app.route('/')
+@gzip_response
 def index():
-    """Serve the web interface"""
-    return flask.send_file('index.html')
+    """Serve the web interface with caching and compression"""
+    response = flask.make_response(flask.send_file('index.html'))
+    response.headers['Cache-Control'] = 'public, max-age=3600'
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['ETag'] = '1.0'
+    return response
 
 @app.route('/api/execute', methods=['POST'])
 def execute_command():
@@ -171,5 +190,6 @@ if __name__ == '__main__':
     print(f"📱 Open in Chrome: http://YOUR_DEVICE_IP:{PORT}")
     print(f"🔧 To find your IP, run: ifconfig or ip addr show")
     print(f"⚠️  WARNING: This server is not encrypted. Use only on trusted networks!")
+    print(f"✅ Optimizations: Gzip compression, Caching, Threading enabled")
     print()
-    app.run(host=HOST, port=PORT, debug=True)
+    app.run(host=HOST, port=PORT, debug=False, threaded=True)
