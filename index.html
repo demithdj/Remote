@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Termux Remote Control - Chrome</title>
+    <title>TERMUX SHELL - System Access</title>
     <style>
         * {
             margin: 0;
@@ -11,71 +11,166 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Space+Mono&display=swap');
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        body {
+            font-family: 'Courier Prime', monospace;
+            background: #0a0e27;
+            color: #00ff00;
+            min-height: 100vh;
+            padding: 10px;
+            position: relative;
             overflow: hidden;
         }
 
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 255, 0, 0.03) 0px,
+                    rgba(0, 255, 0, 0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            pointer-events: none;
+            z-index: 1;
+            animation: scanlines 8s linear infinite;
+        }
+
+        @keyframes scanlines {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(10px);
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
             text-align: center;
+            border: 2px solid #00ff00;
+            padding: 15px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, rgba(0, 255, 0, 0.1), rgba(0, 150, 0, 0.1));
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3), inset 0 0 10px rgba(0, 255, 0, 0.1);
+            position: relative;
+        }
+
+        .header::before {
+            content: '[ TERMUX SHELL - v2.1 ]';
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+
+        .header::after {
+            content: '[ROOT ACCESS GRANTED]';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8em;
+            color: #ff0000;
+            opacity: 0.7;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 2.2em;
+            text-shadow: 0 0 10px #00ff00, 0 0 20px #00aa00;
+            letter-spacing: 3px;
+            font-weight: bold;
+            margin: 10px 0;
         }
 
         .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+            font-size: 0.85em;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
         .content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 30px;
+            gap: 15px;
+            margin-bottom: 20px;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 1000px) {
             .content {
                 grid-template-columns: 1fr;
             }
         }
 
-        .section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            border: 2px solid #e9ecef;
-            transition: all 0.3s ease;
+        .terminal-window {
+            border: 2px solid #00ff00;
+            background: #0a0e27;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2), inset 0 0 10px rgba(0, 255, 0, 0.05);
+            overflow: hidden;
         }
 
-        .section:hover {
-            border-color: #667eea;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        .terminal-header {
+            background: linear-gradient(90deg, #1a2a47, #0a0e27);
+            border-bottom: 1px solid #00ff00;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75em;
         }
 
-        .section h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
+        .terminal-header-title {
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .terminal-header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-min, .btn-max, .btn-close {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid #00ff00;
+        }
+
+        .btn-min {
+            background: #ffaa00;
+        }
+
+        .btn-max {
+            background: #00ff00;
+        }
+
+        .btn-close {
+            background: #ff0000;
+        }
+
+        .terminal-content {
+            padding: 15px;
+            min-height: 250px;
         }
 
         .input-group {
@@ -85,27 +180,32 @@
         .input-group label {
             display: block;
             margin-bottom: 5px;
-            color: #333;
-            font-weight: 600;
-            font-size: 0.9em;
+            color: #00ff00;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            text-shadow: 0 0 5px #00ff00;
+            letter-spacing: 1px;
         }
 
         .input-group input,
         .input-group textarea {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e9ecef;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 1em;
-            transition: border-color 0.3s ease;
+            padding: 10px;
+            background: #0a0e27;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.9em;
+            box-shadow: inset 0 0 5px rgba(0, 255, 0, 0.2);
         }
 
         .input-group input:focus,
         .input-group textarea:focus {
             outline: none;
-            border-color: #667eea;
-            background: white;
+            border-color: #00ffff;
+            box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.3), 0 0 10px rgba(0, 255, 255, 0.2);
+            color: #00ffff;
         }
 
         .input-group textarea {
@@ -114,24 +214,30 @@
         }
 
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
+            background: linear-gradient(135deg, #001100, #003300);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 10px 20px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.9em;
             cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            position: relative;
         }
 
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            background: linear-gradient(135deg, #003300, #006600);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6), inset 0 0 10px rgba(0, 255, 0, 0.2);
+            text-shadow: 0 0 10px #00ff00;
+            transform: scale(1.02);
         }
 
         button:active {
-            transform: translateY(0);
+            transform: scale(0.98);
         }
 
         .button-group {
@@ -142,177 +248,335 @@
 
         .button-group button {
             flex: 1;
-            min-width: 100px;
+            min-width: 80px;
+            padding: 8px 15px;
+            font-size: 0.8em;
         }
 
         .output {
-            background: #1e1e1e;
+            background: #0a0e27;
             color: #00ff00;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
+            padding: 12px;
+            border: 1px solid #00ff00;
+            border-radius: 0;
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.85em;
             max-height: 300px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
-            border: 2px solid #333;
+            margin-top: 15px;
+            box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.1);
+            line-height: 1.4;
         }
 
         .output.error {
-            color: #ff4444;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+        }
+
+        .output.success {
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
         }
 
         .status {
             padding: 10px;
-            border-radius: 5px;
             margin-bottom: 15px;
-            font-weight: 600;
+            font-weight: bold;
             text-align: center;
+            border: 1px solid #00ff00;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 1px;
         }
 
         .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 2px solid #c3e6cb;
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
         }
 
         .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 2px solid #f5c6cb;
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+            border-color: #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
         }
 
         .status.loading {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 2px solid #bee5eb;
+            background: rgba(0, 200, 255, 0.1);
+            color: #00ffff;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
+        }
+
+        .file-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #00ff00;
+            background: #0a0e27;
+            margin-top: 15px;
+        }
+
+        .file-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #003300;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9em;
+        }
+
+        .file-item:hover {
+            background: rgba(0, 255, 0, 0.1);
+            padding-left: 20px;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .file-item.dir {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .file-item.file {
+            color: #00ff00;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .full-width {
             grid-column: 1 / -1;
         }
 
-        .file-list {
-            max-height: 250px;
-            overflow-y: auto;
-            border: 2px solid #e9ecef;
-            border-radius: 5px;
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .file-item {
-            padding: 10px;
-            border-bottom: 1px solid #e9ecef;
-            cursor: pointer;
-            transition: background 0.2s ease;
+        ::-webkit-scrollbar-track {
+            background: #0a0e27;
         }
 
-        .file-item:hover {
-            background: #e9ecef;
+        ::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
         }
 
-        .file-item.dir {
-            color: #667eea;
-            font-weight: 600;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
         }
 
-        .file-item.file {
-            color: #333;
+        .cmd-prefix {
+            color: #00ffff;
+            font-weight: bold;
+            margin-right: 5px;
         }
 
-        .spinner {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid #667eea;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 0.6s linear infinite;
+        .prompt {
+            color: #00ff00;
+            margin-bottom: 5px;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .command-prompt {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #00ff00;
+            margin-top: 10px;
+        }
+
+        .command-prompt::before {
+            content: 'root@termux:~$ ';
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 15px;
+            border: 2px solid #00ff00;
+            border-top: 2px solid #00ff00;
+            font-size: 0.75em;
+            background: rgba(0, 255, 0, 0.05);
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+
+        .footer::before {
+            content: '═════════════════════════════════════════════════════════════════════';
+            display: block;
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .footer::after {
+            content: '═════════════════════════════════════════════════════════════════════';
+            display: block;
+            color: #00ff00;
+            margin-top: 10px;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔧 Termux Remote Control</h1>
-            <p>Control your Termux device directly from Chrome</p>
+            <h1>█ TERMUX REMOTE SHELL █</h1>
+            <p>[ SECURE TERMINAL ACCESS PROTOCOL v2.1 ]</p>
+            <p style="font-size: 0.75em; margin-top: 8px; color: #00ffff;">
+                Authenticated Session • Encryption: AES-256 • Connection Established
+            </p>
         </div>
 
         <div class="content">
-            <!-- Shell Command Section -->
-            <div class="section">
-                <h2>⚙️ Shell Commands</h2>
-                <div id="shell-status"></div>
-                <div class="input-group">
-                    <label>Enter Command:</label>
-                    <input type="text" id="command-input" placeholder="e.g., ls -la, pwd, df -h" />
+            <!-- Command Execution -->
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-header-title">⚙️ Shell Executor</span>
+                    <div class="terminal-header-buttons">
+                        <div class="btn-min"></div>
+                        <div class="btn-max"></div>
+                        <div class="btn-close"></div>
+                    </div>
                 </div>
-                <button onclick="executeCommand()">Execute Command</button>
-                <div id="command-output" class="output" style="display:none; margin-top: 15px;"></div>
+                <div class="terminal-content">
+                    <div id="shell-status"></div>
+                    <div class="input-group">
+                        <label>>>> Execute Command:</label>
+                        <input type="text" id="command-input" placeholder="root@termux:~# " />
+                    </div>
+                    <button onclick="executeCommand()" style="width: 100%;">EXECUTE</button>
+                    <div id="command-output" class="output success" style="display:none;"></div>
+                </div>
             </div>
 
-            <!-- File Manager Section -->
-            <div class="section">
-                <h2>📁 File Manager</h2>
-                <div id="file-status"></div>
-                <div class="input-group">
-                    <label>Directory Path:</label>
-                    <input type="text" id="file-path" value="/sdcard" placeholder="/sdcard" />
+            <!-- File Manager -->
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-header-title">📁 File Navigator</span>
+                    <div class="terminal-header-buttons">
+                        <div class="btn-min"></div>
+                        <div class="btn-max"></div>
+                        <div class="btn-close"></div>
+                    </div>
                 </div>
-                <button onclick="listFiles()">List Files</button>
-                <div id="file-list" class="file-list" style="display:none; margin-top: 15px;"></div>
+                <div class="terminal-content">
+                    <div id="file-status"></div>
+                    <div class="input-group">
+                        <label>>>> Directory Path:</label>
+                        <input type="text" id="file-path" value="/sdcard" placeholder="/sdcard" />
+                    </div>
+                    <button onclick="listFiles()" style="width: 100%;">SCAN DIRECTORY</button>
+                    <div id="file-list" class="file-list" style="display:none;"></div>
+                </div>
             </div>
 
-            <!-- Read File Section -->
-            <div class="section">
-                <h2>📖 Read File</h2>
-                <div id="read-status"></div>
-                <div class="input-group">
-                    <label>File Path:</label>
-                    <input type="text" id="read-path" placeholder="/sdcard/file.txt" />
+            <!-- Read File -->
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-header-title">📖 File Reader</span>
+                    <div class="terminal-header-buttons">
+                        <div class="btn-min"></div>
+                        <div class="btn-max"></div>
+                        <div class="btn-close"></div>
+                    </div>
                 </div>
-                <button onclick="readFile()">Read File</button>
-                <div id="read-output" class="output" style="display:none; margin-top: 15px;"></div>
+                <div class="terminal-content">
+                    <div id="read-status"></div>
+                    <div class="input-group">
+                        <label>>>> File Path:</label>
+                        <input type="text" id="read-path" placeholder="/sdcard/file.txt" />
+                    </div>
+                    <button onclick="readFile()" style="width: 100%;">READ FILE</button>
+                    <div id="read-output" class="output success" style="display:none;"></div>
+                </div>
             </div>
 
-            <!-- Write File Section -->
-            <div class="section">
-                <h2>✏️ Write File</h2>
-                <div id="write-status"></div>
-                <div class="input-group">
-                    <label>File Path:</label>
-                    <input type="text" id="write-path" placeholder="/sdcard/newfile.txt" />
+            <!-- Write File -->
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-header-title">✏️ File Editor</span>
+                    <div class="terminal-header-buttons">
+                        <div class="btn-min"></div>
+                        <div class="btn-max"></div>
+                        <div class="btn-close"></div>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label>Content:</label>
-                    <textarea id="write-content" placeholder="Enter file content here..."></textarea>
+                <div class="terminal-content">
+                    <div id="write-status"></div>
+                    <div class="input-group">
+                        <label>>>> File Path:</label>
+                        <input type="text" id="write-path" placeholder="/sdcard/newfile.txt" />
+                    </div>
+                    <div class="input-group">
+                        <label>>>> File Content:</label>
+                        <textarea id="write-content" placeholder="Enter file content here..."></textarea>
+                    </div>
+                    <button onclick="writeFile()" style="width: 100%;">SAVE FILE</button>
                 </div>
-                <button onclick="writeFile()">Write File</button>
             </div>
 
-            <!-- System Info Section -->
-            <div class="section">
-                <h2>ℹ️ System Information</h2>
-                <button onclick="getSystemInfo()">Get System Info</button>
-                <div id="info-output" class="output" style="display:none; margin-top: 15px;"></div>
+            <!-- System Info -->
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-header-title">ℹ️ System Information</span>
+                    <div class="terminal-header-buttons">
+                        <div class="btn-min"></div>
+                        <div class="btn-max"></div>
+                        <div class="btn-close"></div>
+                    </div>
+                </div>
+                <div class="terminal-content">
+                    <button onclick="getSystemInfo()" style="width: 100%; margin-bottom: 15px;">GET SYSTEM INFO</button>
+                    <div id="info-output" class="output success" style="display:none;"></div>
+                </div>
             </div>
 
             <!-- Quick Commands -->
-            <div class="section">
-                <h2>⚡ Quick Commands</h2>
-                <div class="button-group">
-                    <button onclick="quickCommand('ls -la')">List Files</button>
-                    <button onclick="quickCommand('pwd')">Current Dir</button>
-                    <button onclick="quickCommand('df -h')">Disk Usage</button>
-                    <button onclick="quickCommand('free -h')">Memory</button>
-                    <button onclick="quickCommand('whoami')">Current User</button>
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-header-title">⚡ Quick Commands</span>
+                    <div class="terminal-header-buttons">
+                        <div class="btn-min"></div>
+                        <div class="btn-max"></div>
+                        <div class="btn-close"></div>
+                    </div>
                 </div>
-                <div id="quick-output" class="output" style="display:none; margin-top: 15px;"></div>
+                <div class="terminal-content">
+                    <div class="button-group">
+                        <button onclick="quickCommand('ls -la')">LS</button>
+                        <button onclick="quickCommand('pwd')">PWD</button>
+                        <button onclick="quickCommand('df -h')">DISK</button>
+                        <button onclick="quickCommand('free -h')">MEM</button>
+                        <button onclick="quickCommand('whoami')">USER</button>
+                    </div>
+                    <div id="quick-output" class="output success" style="display:none; margin-top: 15px;"></div>
+                </div>
             </div>
+        </div>
+
+        <div class="footer">
+            [STATUS: CONNECTED] • [USER: ROOT] • [SESSION: ACTIVE] • [SECURITY: VERIFIED]
+            <br><br>
+            Warning: Unauthorized access is prohibited. All activities are logged.
         </div>
     </div>
 
@@ -331,11 +595,11 @@
         async function executeCommand() {
             const command = document.getElementById('command-input').value.trim();
             if (!command) {
-                alert('Please enter a command');
+                alert('[ERROR] Please enter a command');
                 return;
             }
 
-            showStatus('shell-status', 'Executing...', 'loading');
+            showStatus('shell-status', 'EXECUTING COMMAND...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/execute', {
@@ -348,26 +612,28 @@
                 const output = document.getElementById('command-output');
                 
                 if (data.status === 'success') {
-                    showStatus('shell-status', 'Command executed!', 'success');
-                    output.innerHTML = `<strong>$ ${command}</strong>\n${data.output || '(no output)'}${data.error ? '\nSTDERR: ' + data.error : ''}`;
+                    showStatus('shell-status', 'COMMAND EXECUTED SUCCESSFULLY', 'success');
+                    output.innerHTML = `<span class="cmd-prefix">[OUTPUT]</span>\n$ ${command}\n\n${data.output || '(no output)'}${data.error ? '\n\n<span style="color: #ff0000;">[ERROR] ' + data.error + '</span>' : ''}`;
                 } else {
-                    showStatus('shell-status', 'Error: ' + data.error, 'error');
-                    output.innerHTML = `Error: ${data.error}`;
+                    showStatus('shell-status', 'ERROR: ' + data.error, 'error');
+                    output.innerHTML = `<span style="color: #ff0000;">[ERROR] ${data.error}</span>`;
+                    output.classList.remove('success');
+                    output.classList.add('error');
                 }
                 output.style.display = 'block';
             } catch (err) {
-                showStatus('shell-status', 'Network error: ' + err.message, 'error');
+                showStatus('shell-status', 'NETWORK ERROR: ' + err.message, 'error');
             }
         }
 
         async function listFiles() {
             const path = document.getElementById('file-path').value.trim();
             if (!path) {
-                alert('Please enter a directory path');
+                alert('[ERROR] Please enter a directory path');
                 return;
             }
 
-            showStatus('file-status', 'Loading files...', 'loading');
+            showStatus('file-status', 'SCANNING DIRECTORY...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/file/list', {
@@ -380,19 +646,19 @@
                 const fileList = document.getElementById('file-list');
                 
                 if (data.status === 'success') {
-                    showStatus('file-status', `${data.files.length} items found`, 'success');
+                    showStatus('file-status', `[${data.files.length} ITEMS FOUND]`, 'success');
                     fileList.innerHTML = data.files.map(f => `
                         <div class="file-item ${f.is_dir ? 'dir' : 'file'}" onclick="handleFileClick('${f.path}', ${f.is_dir})">
-                            ${f.is_dir ? '📁' : '📄'} ${f.name}
+                            ${f.is_dir ? '📁 [DIR]' : '📄 [FILE]'} ${f.name}
                         </div>
                     `).join('');
                 } else {
-                    showStatus('file-status', 'Error: ' + data.error, 'error');
-                    fileList.innerHTML = `<div style="padding: 10px; color: red;">Error: ${data.error}</div>`;
+                    showStatus('file-status', 'ERROR: ' + data.error, 'error');
+                    fileList.innerHTML = `<div style="padding: 10px; color: #ff0000;">[ERROR] ${data.error}</div>`;
                 }
                 fileList.style.display = 'block';
             } catch (err) {
-                showStatus('file-status', 'Network error: ' + err.message, 'error');
+                showStatus('file-status', 'NETWORK ERROR: ' + err.message, 'error');
             }
         }
 
@@ -408,11 +674,11 @@
         async function readFile() {
             const path = document.getElementById('read-path').value.trim();
             if (!path) {
-                alert('Please enter a file path');
+                alert('[ERROR] Please enter a file path');
                 return;
             }
 
-            showStatus('read-status', 'Reading file...', 'loading');
+            showStatus('read-status', 'READING FILE...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/file/read', {
@@ -425,15 +691,17 @@
                 const output = document.getElementById('read-output');
                 
                 if (data.status === 'success') {
-                    showStatus('read-status', 'File read successfully!', 'success');
-                    output.innerHTML = data.content || '(empty file)';
+                    showStatus('read-status', 'FILE READ SUCCESSFULLY', 'success');
+                    output.innerHTML = `<span class="cmd-prefix">[FILE: ${path}]</span>\n\n${data.content || '(empty file)'}`;
                 } else {
-                    showStatus('read-status', 'Error: ' + data.error, 'error');
-                    output.innerHTML = `Error: ${data.error}`;
+                    showStatus('read-status', 'ERROR: ' + data.error, 'error');
+                    output.innerHTML = `<span style="color: #ff0000;">[ERROR] ${data.error}</span>`;
+                    output.classList.remove('success');
+                    output.classList.add('error');
                 }
                 output.style.display = 'block';
             } catch (err) {
-                showStatus('read-status', 'Network error: ' + err.message, 'error');
+                showStatus('read-status', 'NETWORK ERROR: ' + err.message, 'error');
             }
         }
 
@@ -442,11 +710,11 @@
             const content = document.getElementById('write-content').value;
             
             if (!path) {
-                alert('Please enter a file path');
+                alert('[ERROR] Please enter a file path');
                 return;
             }
 
-            showStatus('write-status', 'Writing file...', 'loading');
+            showStatus('write-status', 'SAVING FILE...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/file/write', {
@@ -458,19 +726,19 @@
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    showStatus('write-status', 'File written successfully!', 'success');
+                    showStatus('write-status', 'FILE SAVED SUCCESSFULLY', 'success');
                     document.getElementById('write-path').value = '';
                     document.getElementById('write-content').value = '';
                 } else {
-                    showStatus('write-status', 'Error: ' + data.error, 'error');
+                    showStatus('write-status', 'ERROR: ' + data.error, 'error');
                 }
             } catch (err) {
-                showStatus('write-status', 'Network error: ' + err.message, 'error');
+                showStatus('write-status', 'NETWORK ERROR: ' + err.message, 'error');
             }
         }
 
         async function getSystemInfo() {
-            showStatus('info-status', 'Getting system info...', 'loading');
+            showStatus('info-status', 'RETRIEVING SYSTEM DATA...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/info');
@@ -478,21 +746,21 @@
                 const output = document.getElementById('info-output');
                 
                 if (data.status === 'success') {
-                    showStatus('info-status', 'System info retrieved!', 'success');
-                    output.innerHTML = `System: ${data.system}\n\nHome: ${data.home}\n\nCurrent Dir: ${data.current_dir}\n\nPython: ${data.python_version}`;
+                    showStatus('info-status', 'SYSTEM INFO RETRIEVED', 'success');
+                    output.innerHTML = `[SYSTEM INFORMATION]\n\nOS: ${data.system}\nHOME: ${data.home}\nWORKDIR: ${data.current_dir}\nPYTHON: ${data.python_version}`;
                 } else {
-                    showStatus('info-status', 'Error: ' + data.error, 'error');
+                    showStatus('info-status', 'ERROR: ' + data.error, 'error');
                 }
                 output.style.display = 'block';
             } catch (err) {
-                showStatus('info-status', 'Network error: ' + err.message, 'error');
+                showStatus('info-status', 'NETWORK ERROR: ' + err.message, 'error');
             }
         }
 
         async function quickCommand(cmd) {
             document.getElementById('command-input').value = cmd;
             const output = document.getElementById('quick-output');
-            output.innerHTML = '<span class="spinner"></span> Executing...';
+            output.innerHTML = '<span class="spinner"></span> EXECUTING...';
             output.style.display = 'block';
             
             try {
@@ -505,18 +773,19 @@
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    output.innerHTML = `<strong>$ ${cmd}</strong>\n${data.output}`;
+                    output.innerHTML = `<span class="cmd-prefix">[OUTPUT]</span>\n$ ${cmd}\n\n${data.output}`;
                 } else {
-                    output.innerHTML = `Error: ${data.error}`;
+                    output.innerHTML = `<span style="color: #ff0000;">[ERROR] ${data.error}</span>`;
+                    output.classList.remove('success');
                     output.classList.add('error');
                 }
             } catch (err) {
-                output.innerHTML = `Network error: ${err.message}`;
+                output.innerHTML = `<span style="color: #ff0000;">[ERROR] ${err.message}</span>`;
+                output.classList.remove('success');
                 output.classList.add('error');
             }
         }
 
-        // Keyboard shortcut: Enter to execute command
         document.getElementById('command-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') executeCommand();
         });
