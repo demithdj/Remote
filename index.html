@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TERMUX SHELL - System Access</title>
+    <title>Ubuntu Desktop - Termux Remote Control</title>
     <style>
         * {
             margin: 0;
@@ -11,168 +11,183 @@
             box-sizing: border-box;
         }
 
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Space+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap');
 
         body {
-            font-family: 'Courier Prime', monospace;
-            background: #0a0e27;
-            color: #00ff00;
+            font-family: 'Ubuntu', sans-serif;
+            background: linear-gradient(135deg, #dd4814 0%, #77216f 100%);
             min-height: 100vh;
-            padding: 10px;
+            display: flex;
+            flex-direction: column;
             position: relative;
-            overflow: hidden;
         }
 
-        /* Animated background */
-        body::before {
-            content: '';
+        /* Desktop background */
+        .desktop {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        /* Desktop icons */
+        .desktop-icons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 80px);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .desktop-icon-img {
+            font-size: 3em;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        /* Taskbar */
+        .taskbar {
+            background: rgba(0, 0, 0, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            height: 50px;
+        }
+
+        .taskbar-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+
+        .taskbar-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .taskbar-button.active {
+            background: #dd4814;
+            border-color: #dd4814;
+        }
+
+        .app-icon {
+            font-size: 1.2em;
+        }
+
+        /* Window container */
+        .windows-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
-            background: 
-                repeating-linear-gradient(
-                    0deg,
-                    rgba(0, 255, 0, 0.03) 0px,
-                    rgba(0, 255, 0, 0.03) 1px,
-                    transparent 1px,
-                    transparent 2px
-                );
+            height: calc(100vh - 50px);
+            z-index: 1000;
             pointer-events: none;
-            z-index: 1;
-            animation: scanlines 8s linear infinite;
         }
 
-        @keyframes scanlines {
-            0% {
-                transform: translateY(0);
-            }
-            100% {
-                transform: translateY(10px);
-            }
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
-        }
-
-        .header {
-            text-align: center;
-            border: 2px solid #00ff00;
-            padding: 15px;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, rgba(0, 255, 0, 0.1), rgba(0, 150, 0, 0.1));
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3), inset 0 0 10px rgba(0, 255, 0, 0.1);
-            position: relative;
-        }
-
-        .header::before {
-            content: '[ TERMUX SHELL - v2.1 ]';
+        .window {
             position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.8em;
-            opacity: 0.7;
+            background: #f5f5f5;
+            border: 1px solid #999;
+            border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: none;
+            flex-direction: column;
+            min-width: 400px;
+            min-height: 300px;
+            pointer-events: auto;
+            z-index: 100;
         }
 
-        .header::after {
-            content: '[ROOT ACCESS GRANTED]';
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.8em;
-            color: #ff0000;
-            opacity: 0.7;
+        .window.active {
+            z-index: 101;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
 
-        .header h1 {
-            font-size: 2.2em;
-            text-shadow: 0 0 10px #00ff00, 0 0 20px #00aa00;
-            letter-spacing: 3px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-
-        .header p {
-            font-size: 0.85em;
-            opacity: 0.8;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 1000px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .terminal-window {
-            border: 2px solid #00ff00;
-            background: #0a0e27;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2), inset 0 0 10px rgba(0, 255, 0, 0.05);
-            overflow: hidden;
-        }
-
-        .terminal-header {
-            background: linear-gradient(90deg, #1a2a47, #0a0e27);
-            border-bottom: 1px solid #00ff00;
+        .window-header {
+            background: linear-gradient(90deg, #dd4814 0%, #a91c14 100%);
+            color: white;
             padding: 8px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.75em;
+            cursor: move;
+            user-select: none;
+            border-radius: 4px 4px 0 0;
         }
 
-        .terminal-header-title {
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #00ff00;
-            font-weight: bold;
+        .window-title {
+            font-weight: 500;
+            flex: 1;
         }
 
-        .terminal-header-buttons {
+        .window-controls {
             display: flex;
             gap: 8px;
         }
 
-        .btn-min, .btn-max, .btn-close {
-            width: 12px;
-            height: 12px;
+        .window-btn {
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
+            border: none;
             cursor: pointer;
-            border: 1px solid #00ff00;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            transition: all 0.2s ease;
         }
 
-        .btn-min {
-            background: #ffaa00;
+        .btn-minimize {
+            background: #f4c20b;
         }
 
-        .btn-max {
-            background: #00ff00;
+        .btn-maximize {
+            background: #3dd655;
         }
 
         .btn-close {
-            background: #ff0000;
+            background: #ff5d52;
         }
 
-        .terminal-content {
+        .window-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .window-content {
+            flex: 1;
+            overflow: auto;
             padding: 15px;
-            min-height: 250px;
         }
 
+        /* Input styles */
         .input-group {
             margin-bottom: 15px;
         }
@@ -180,32 +195,26 @@
         .input-group label {
             display: block;
             margin-bottom: 5px;
-            color: #00ff00;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 0.85em;
-            text-shadow: 0 0 5px #00ff00;
-            letter-spacing: 1px;
+            font-weight: 500;
+            color: #333;
+            font-size: 0.9em;
         }
 
         .input-group input,
         .input-group textarea {
             width: 100%;
-            padding: 10px;
-            background: #0a0e27;
-            border: 1px solid #00ff00;
-            color: #00ff00;
-            font-family: 'Courier Prime', monospace;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Ubuntu', sans-serif;
             font-size: 0.9em;
-            box-shadow: inset 0 0 5px rgba(0, 255, 0, 0.2);
         }
 
         .input-group input:focus,
         .input-group textarea:focus {
             outline: none;
-            border-color: #00ffff;
-            box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.3), 0 0 10px rgba(0, 255, 255, 0.2);
-            color: #00ffff;
+            border-color: #dd4814;
+            box-shadow: 0 0 0 3px rgba(221, 72, 20, 0.1);
         }
 
         .input-group textarea {
@@ -213,27 +222,23 @@
             min-height: 100px;
         }
 
+        /* Buttons */
         button {
-            background: linear-gradient(135deg, #001100, #003300);
-            color: #00ff00;
-            border: 2px solid #00ff00;
+            background: linear-gradient(90deg, #dd4814 0%, #c43812 100%);
+            color: white;
+            border: none;
             padding: 10px 20px;
-            font-family: 'Courier Prime', monospace;
-            font-size: 0.9em;
+            border-radius: 4px;
             cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
-            position: relative;
+            font-family: 'Ubuntu', sans-serif;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
         button:hover {
-            background: linear-gradient(135deg, #003300, #006600);
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6), inset 0 0 10px rgba(0, 255, 0, 0.2);
-            text-shadow: 0 0 10px #00ff00;
-            transform: scale(1.02);
+            background: linear-gradient(90deg, #e85a28 0%, #dd4814 100%);
+            box-shadow: 0 2px 8px rgba(221, 72, 20, 0.3);
         }
 
         button:active {
@@ -242,364 +247,393 @@
 
         .button-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
         .button-group button {
             flex: 1;
-            min-width: 80px;
-            padding: 8px 15px;
-            font-size: 0.8em;
+            min-width: 60px;
+            padding: 8px 12px;
+            font-size: 0.85em;
         }
 
+        /* Output box */
         .output {
-            background: #0a0e27;
+            background: #2c2c2c;
             color: #00ff00;
             padding: 12px;
-            border: 1px solid #00ff00;
-            border-radius: 0;
-            font-family: 'Courier Prime', monospace;
+            border: 1px solid #666;
+            border-radius: 4px;
+            font-family: 'Ubuntu Mono', monospace;
             font-size: 0.85em;
-            max-height: 300px;
+            max-height: 250px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
-            margin-top: 15px;
-            box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.1);
+            margin-top: 12px;
             line-height: 1.4;
         }
 
         .output.error {
-            color: #ff0000;
-            text-shadow: 0 0 10px #ff0000;
-        }
-
-        .output.success {
-            color: #00ff00;
-            text-shadow: 0 0 5px #00ff00;
+            color: #ff6b6b;
         }
 
         .status {
             padding: 10px;
-            margin-bottom: 15px;
-            font-weight: bold;
-            text-align: center;
-            border: 1px solid #00ff00;
-            text-transform: uppercase;
-            font-size: 0.85em;
-            letter-spacing: 1px;
-        }
-
-        .status.success {
-            background: rgba(0, 255, 0, 0.1);
-            color: #00ff00;
-            border-color: #00ff00;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
-        }
-
-        .status.error {
-            background: rgba(255, 0, 0, 0.1);
-            color: #ff0000;
-            border-color: #ff0000;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
-        }
-
-        .status.loading {
-            background: rgba(0, 200, 255, 0.1);
-            color: #00ffff;
-            border-color: #00ffff;
-            box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
-        }
-
-        .file-list {
-            max-height: 250px;
-            overflow-y: auto;
-            border: 1px solid #00ff00;
-            background: #0a0e27;
-            margin-top: 15px;
-        }
-
-        .file-item {
-            padding: 8px 12px;
-            border-bottom: 1px solid #003300;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            margin-bottom: 12px;
+            border-radius: 4px;
+            font-weight: 500;
             font-size: 0.9em;
         }
 
+        .status.success {
+            background: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+
+        .status.error {
+            background: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+
+        .status.loading {
+            background: #d9edf7;
+            color: #31708f;
+            border: 1px solid #bce8f1;
+        }
+
+        /* File list */
+        .file-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            margin-top: 12px;
+        }
+
+        .file-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
         .file-item:hover {
-            background: rgba(0, 255, 0, 0.1);
-            padding-left: 20px;
-            text-shadow: 0 0 5px #00ff00;
+            background: #f0f0f0;
+        }
+
+        .file-item-icon {
+            font-size: 1.2em;
         }
 
         .file-item.dir {
-            color: #00ffff;
-            font-weight: bold;
+            color: #0066cc;
+            font-weight: 500;
         }
 
         .file-item.file {
-            color: #00ff00;
+            color: #333;
         }
 
         .spinner {
             display: inline-block;
             width: 10px;
             height: 10px;
-            border: 2px solid #00ff00;
+            border: 2px solid #dd4814;
             border-radius: 50%;
             border-top-color: transparent;
             animation: spin 0.6s linear infinite;
-            margin-right: 5px;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        .full-width {
-            grid-column: 1 / -1;
-        }
-
-        /* Scrollbar styling */
+        /* Scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 10px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #0a0e27;
+            background: #f1f1f1;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #00ff00;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            background: #dd4814;
+            border-radius: 5px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: #00ffff;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            background: #c43812;
         }
 
-        .cmd-prefix {
-            color: #00ffff;
-            font-weight: bold;
-            margin-right: 5px;
+        /* Hidden windows */
+        .window {
+            display: none;
         }
 
-        .prompt {
-            color: #00ff00;
-            margin-bottom: 5px;
-        }
-
-        .command-prompt {
+        .window.active {
             display: flex;
-            align-items: center;
-            gap: 5px;
-            color: #00ff00;
-            margin-top: 10px;
         }
 
-        .command-prompt::before {
-            content: 'root@termux:~$ ';
-            color: #00ffff;
-            font-weight: bold;
-        }
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .window {
+                min-width: 90vw;
+                width: 90vw;
+                height: auto;
+                max-height: 80vh;
+            }
 
-        .footer {
-            text-align: center;
-            padding: 15px;
-            border: 2px solid #00ff00;
-            border-top: 2px solid #00ff00;
-            font-size: 0.75em;
-            background: rgba(0, 255, 0, 0.05);
-            margin-top: 20px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-        }
-
-        .footer::before {
-            content: '═════════════════════════════════════════════════════════════════════';
-            display: block;
-            color: #00ff00;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-        }
-
-        .footer::after {
-            content: '═════════════════════════════════════════════════════════════════════';
-            display: block;
-            color: #00ff00;
-            margin-top: 10px;
-            font-size: 0.9em;
+            .desktop-icons {
+                grid-template-columns: repeat(auto-fill, 60px);
+                gap: 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>█ TERMUX REMOTE SHELL █</h1>
-            <p>[ SECURE TERMINAL ACCESS PROTOCOL v2.1 ]</p>
-            <p style="font-size: 0.75em; margin-top: 8px; color: #00ffff;">
-                Authenticated Session • Encryption: AES-256 • Connection Established
-            </p>
-        </div>
-
-        <div class="content">
-            <!-- Command Execution -->
-            <div class="terminal-window">
-                <div class="terminal-header">
-                    <span class="terminal-header-title">⚙️ Shell Executor</span>
-                    <div class="terminal-header-buttons">
-                        <div class="btn-min"></div>
-                        <div class="btn-max"></div>
-                        <div class="btn-close"></div>
-                    </div>
-                </div>
-                <div class="terminal-content">
-                    <div id="shell-status"></div>
-                    <div class="input-group">
-                        <label>>>> Execute Command:</label>
-                        <input type="text" id="command-input" placeholder="root@termux:~# " />
-                    </div>
-                    <button onclick="executeCommand()" style="width: 100%;">EXECUTE</button>
-                    <div id="command-output" class="output success" style="display:none;"></div>
+    <!-- Windows Container -->
+    <div class="windows-container">
+        <!-- Terminal Window -->
+        <div class="window" id="terminal-window" style="width: 600px; height: 450px; top: 50px; left: 50px; display: flex;">
+            <div class="window-header">
+                <span class="window-title">🖥️ Terminal</span>
+                <div class="window-controls">
+                    <button class="window-btn btn-minimize" onclick="minimizeWindow('terminal-window')">−</button>
+                    <button class="window-btn btn-maximize" onclick="maximizeWindow('terminal-window')">□</button>
+                    <button class="window-btn btn-close" onclick="closeWindow('terminal-window')">✕</button>
                 </div>
             </div>
-
-            <!-- File Manager -->
-            <div class="terminal-window">
-                <div class="terminal-header">
-                    <span class="terminal-header-title">📁 File Navigator</span>
-                    <div class="terminal-header-buttons">
-                        <div class="btn-min"></div>
-                        <div class="btn-max"></div>
-                        <div class="btn-close"></div>
-                    </div>
+            <div class="window-content">
+                <div id="shell-status"></div>
+                <div class="input-group">
+                    <label>Command:</label>
+                    <input type="text" id="command-input" placeholder="Enter a shell command..." />
                 </div>
-                <div class="terminal-content">
-                    <div id="file-status"></div>
-                    <div class="input-group">
-                        <label>>>> Directory Path:</label>
-                        <input type="text" id="file-path" value="/sdcard" placeholder="/sdcard" />
-                    </div>
-                    <button onclick="listFiles()" style="width: 100%;">SCAN DIRECTORY</button>
-                    <div id="file-list" class="file-list" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Read File -->
-            <div class="terminal-window">
-                <div class="terminal-header">
-                    <span class="terminal-header-title">📖 File Reader</span>
-                    <div class="terminal-header-buttons">
-                        <div class="btn-min"></div>
-                        <div class="btn-max"></div>
-                        <div class="btn-close"></div>
-                    </div>
-                </div>
-                <div class="terminal-content">
-                    <div id="read-status"></div>
-                    <div class="input-group">
-                        <label>>>> File Path:</label>
-                        <input type="text" id="read-path" placeholder="/sdcard/file.txt" />
-                    </div>
-                    <button onclick="readFile()" style="width: 100%;">READ FILE</button>
-                    <div id="read-output" class="output success" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Write File -->
-            <div class="terminal-window">
-                <div class="terminal-header">
-                    <span class="terminal-header-title">✏️ File Editor</span>
-                    <div class="terminal-header-buttons">
-                        <div class="btn-min"></div>
-                        <div class="btn-max"></div>
-                        <div class="btn-close"></div>
-                    </div>
-                </div>
-                <div class="terminal-content">
-                    <div id="write-status"></div>
-                    <div class="input-group">
-                        <label>>>> File Path:</label>
-                        <input type="text" id="write-path" placeholder="/sdcard/newfile.txt" />
-                    </div>
-                    <div class="input-group">
-                        <label>>>> File Content:</label>
-                        <textarea id="write-content" placeholder="Enter file content here..."></textarea>
-                    </div>
-                    <button onclick="writeFile()" style="width: 100%;">SAVE FILE</button>
-                </div>
-            </div>
-
-            <!-- System Info -->
-            <div class="terminal-window">
-                <div class="terminal-header">
-                    <span class="terminal-header-title">ℹ️ System Information</span>
-                    <div class="terminal-header-buttons">
-                        <div class="btn-min"></div>
-                        <div class="btn-max"></div>
-                        <div class="btn-close"></div>
-                    </div>
-                </div>
-                <div class="terminal-content">
-                    <button onclick="getSystemInfo()" style="width: 100%; margin-bottom: 15px;">GET SYSTEM INFO</button>
-                    <div id="info-output" class="output success" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Quick Commands -->
-            <div class="terminal-window">
-                <div class="terminal-header">
-                    <span class="terminal-header-title">⚡ Quick Commands</span>
-                    <div class="terminal-header-buttons">
-                        <div class="btn-min"></div>
-                        <div class="btn-max"></div>
-                        <div class="btn-close"></div>
-                    </div>
-                </div>
-                <div class="terminal-content">
-                    <div class="button-group">
-                        <button onclick="quickCommand('ls -la')">LS</button>
-                        <button onclick="quickCommand('pwd')">PWD</button>
-                        <button onclick="quickCommand('df -h')">DISK</button>
-                        <button onclick="quickCommand('free -h')">MEM</button>
-                        <button onclick="quickCommand('whoami')">USER</button>
-                    </div>
-                    <div id="quick-output" class="output success" style="display:none; margin-top: 15px;"></div>
-                </div>
+                <button onclick="executeCommand()" style="width: 100%;">Execute</button>
+                <div id="command-output" class="output" style="display:none;"></div>
             </div>
         </div>
 
-        <div class="footer">
-            [STATUS: CONNECTED] • [USER: ROOT] • [SESSION: ACTIVE] • [SECURITY: VERIFIED]
-            <br><br>
-            Warning: Unauthorized access is prohibited. All activities are logged.
+        <!-- File Manager Window -->
+        <div class="window" id="filemanager-window" style="width: 600px; height: 450px; top: 120px; left: 700px;">
+            <div class="window-header">
+                <span class="window-title">📁 File Manager</span>
+                <div class="window-controls">
+                    <button class="window-btn btn-minimize" onclick="minimizeWindow('filemanager-window')">−</button>
+                    <button class="window-btn btn-maximize" onclick="maximizeWindow('filemanager-window')">□</button>
+                    <button class="window-btn btn-close" onclick="closeWindow('filemanager-window')">✕</button>
+                </div>
+            </div>
+            <div class="window-content">
+                <div id="file-status"></div>
+                <div class="input-group">
+                    <label>Path:</label>
+                    <input type="text" id="file-path" value="/sdcard" placeholder="/sdcard" />
+                </div>
+                <button onclick="listFiles()" style="width: 100%;">Open</button>
+                <div id="file-list" class="file-list" style="display:none;"></div>
+            </div>
         </div>
+
+        <!-- Read File Window -->
+        <div class="window" id="readfile-window" style="width: 600px; height: 450px; top: 200px; left: 100px;">
+            <div class="window-header">
+                <span class="window-title">📄 Text Editor</span>
+                <div class="window-controls">
+                    <button class="window-btn btn-minimize" onclick="minimizeWindow('readfile-window')">−</button>
+                    <button class="window-btn btn-maximize" onclick="maximizeWindow('readfile-window')">□</button>
+                    <button class="window-btn btn-close" onclick="closeWindow('readfile-window')">✕</button>
+                </div>
+            </div>
+            <div class="window-content">
+                <div id="read-status"></div>
+                <div class="input-group">
+                    <label>File Path:</label>
+                    <input type="text" id="read-path" placeholder="/sdcard/file.txt" />
+                </div>
+                <button onclick="readFile()" style="width: 100%;">Open File</button>
+                <div id="read-output" class="output" style="display:none;"></div>
+            </div>
+        </div>
+
+        <!-- Write File Window -->
+        <div class="window" id="writefile-window" style="width: 600px; height: 500px; top: 250px; left: 750px;">
+            <div class="window-header">
+                <span class="window-title">✏️ Write File</span>
+                <div class="window-controls">
+                    <button class="window-btn btn-minimize" onclick="minimizeWindow('writefile-window')">−</button>
+                    <button class="window-btn btn-maximize" onclick="maximizeWindow('writefile-window')">□</button>
+                    <button class="window-btn btn-close" onclick="closeWindow('writefile-window')">✕</button>
+                </div>
+            </div>
+            <div class="window-content">
+                <div id="write-status"></div>
+                <div class="input-group">
+                    <label>File Path:</label>
+                    <input type="text" id="write-path" placeholder="/sdcard/newfile.txt" />
+                </div>
+                <div class="input-group">
+                    <label>Content:</label>
+                    <textarea id="write-content" placeholder="Enter file content..."></textarea>
+                </div>
+                <button onclick="writeFile()" style="width: 100%;">Save</button>
+            </div>
+        </div>
+
+        <!-- System Info Window -->
+        <div class="window" id="sysinfo-window" style="width: 500px; height: 350px; top: 50px; left: 1350px;">
+            <div class="window-header">
+                <span class="window-title">ℹ️ System Information</span>
+                <div class="window-controls">
+                    <button class="window-btn btn-minimize" onclick="minimizeWindow('sysinfo-window')">−</button>
+                    <button class="window-btn btn-maximize" onclick="maximizeWindow('sysinfo-window')">□</button>
+                    <button class="window-btn btn-close" onclick="closeWindow('sysinfo-window')">✕</button>
+                </div>
+            </div>
+            <div class="window-content">
+                <button onclick="getSystemInfo()" style="width: 100%; margin-bottom: 15px;">Refresh</button>
+                <div id="info-output" class="output" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desktop Background -->
+    <div class="desktop">
+        <div class="desktop-icons">
+            <div class="desktop-icon" onclick="openWindow('terminal-window')">
+                <div class="desktop-icon-img">🖥️</div>
+                <div>Terminal</div>
+            </div>
+            <div class="desktop-icon" onclick="openWindow('filemanager-window')">
+                <div class="desktop-icon-img">📁</div>
+                <div>File Manager</div>
+            </div>
+            <div class="desktop-icon" onclick="openWindow('readfile-window')">
+                <div class="desktop-icon-img">📄</div>
+                <div>Text Editor</div>
+            </div>
+            <div class="desktop-icon" onclick="openWindow('writefile-window')">
+                <div class="desktop-icon-img">✏️</div>
+                <div>Write File</div>
+            </div>
+            <div class="desktop-icon" onclick="openWindow('sysinfo-window')">
+                <div class="desktop-icon-img">ℹ️</div>
+                <div>System Info</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <button class="taskbar-button" onclick="openWindow('terminal-window')">
+            <span class="app-icon">🖥️</span>
+            <span>Terminal</span>
+        </button>
+        <button class="taskbar-button" onclick="openWindow('filemanager-window')">
+            <span class="app-icon">📁</span>
+            <span>Files</span>
+        </button>
+        <button class="taskbar-button" onclick="openWindow('readfile-window')">
+            <span class="app-icon">📄</span>
+            <span>Editor</span>
+        </button>
+        <button class="taskbar-button" onclick="openWindow('sysinfo-window')">
+            <span class="app-icon">ℹ️</span>
+            <span>System</span>
+        </button>
     </div>
 
     <script>
         const API_BASE = location.protocol + '//' + location.host + '/api';
+        let windowZIndex = 100;
 
+        // Window Management
+        function openWindow(windowId) {
+            const window = document.getElementById(windowId);
+            window.style.display = 'flex';
+            window.classList.add('active');
+            window.style.zIndex = ++windowZIndex;
+        }
+
+        function closeWindow(windowId) {
+            const window = document.getElementById(windowId);
+            window.style.display = 'none';
+            window.classList.remove('active');
+        }
+
+        function minimizeWindow(windowId) {
+            const window = document.getElementById(windowId);
+            window.style.display = 'none';
+        }
+
+        function maximizeWindow(windowId) {
+            const window = document.getElementById(windowId);
+            if (window.style.width === '100%') {
+                window.style.width = '600px';
+                window.style.height = '450px';
+            } else {
+                window.style.width = '100%';
+                window.style.height = 'calc(100vh - 50px)';
+            }
+        }
+
+        // Make windows draggable
+        document.querySelectorAll('.window-header').forEach(header => {
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+
+            header.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                initialX = e.clientX;
+                initialY = e.clientY;
+                const rect = header.closest('.window').getBoundingClientRect();
+                currentX = rect.left;
+                currentY = rect.top;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaX = e.clientX - initialX;
+                    const deltaY = e.clientY - initialY;
+                    header.closest('.window').style.left = (currentX + deltaX) + 'px';
+                    header.closest('.window').style.top = (currentY + deltaY) + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+        });
+
+        // API Functions
         function showStatus(elementId, message, type = 'loading') {
             const el = document.getElementById(elementId);
             let icon = '⏳';
             if (type === 'success') icon = '✅';
             if (type === 'error') icon = '❌';
-            
             el.innerHTML = `<div class="status ${type}">${icon} ${message}</div>`;
         }
 
         async function executeCommand() {
             const command = document.getElementById('command-input').value.trim();
             if (!command) {
-                alert('[ERROR] Please enter a command');
+                alert('Please enter a command');
                 return;
             }
 
-            showStatus('shell-status', 'EXECUTING COMMAND...', 'loading');
+            showStatus('shell-status', 'Executing...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/execute', {
@@ -612,28 +646,27 @@
                 const output = document.getElementById('command-output');
                 
                 if (data.status === 'success') {
-                    showStatus('shell-status', 'COMMAND EXECUTED SUCCESSFULLY', 'success');
-                    output.innerHTML = `<span class="cmd-prefix">[OUTPUT]</span>\n$ ${command}\n\n${data.output || '(no output)'}${data.error ? '\n\n<span style="color: #ff0000;">[ERROR] ' + data.error + '</span>' : ''}`;
+                    showStatus('shell-status', 'Command executed!', 'success');
+                    output.innerHTML = `$ ${command}\n\n${data.output || '(no output)'}${data.error ? '\nERROR: ' + data.error : ''}`;
                 } else {
-                    showStatus('shell-status', 'ERROR: ' + data.error, 'error');
-                    output.innerHTML = `<span style="color: #ff0000;">[ERROR] ${data.error}</span>`;
-                    output.classList.remove('success');
+                    showStatus('shell-status', 'Error: ' + data.error, 'error');
+                    output.innerHTML = `Error: ${data.error}`;
                     output.classList.add('error');
                 }
                 output.style.display = 'block';
             } catch (err) {
-                showStatus('shell-status', 'NETWORK ERROR: ' + err.message, 'error');
+                showStatus('shell-status', 'Network error: ' + err.message, 'error');
             }
         }
 
         async function listFiles() {
             const path = document.getElementById('file-path').value.trim();
             if (!path) {
-                alert('[ERROR] Please enter a directory path');
+                alert('Please enter a path');
                 return;
             }
 
-            showStatus('file-status', 'SCANNING DIRECTORY...', 'loading');
+            showStatus('file-status', 'Loading...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/file/list', {
@@ -646,19 +679,19 @@
                 const fileList = document.getElementById('file-list');
                 
                 if (data.status === 'success') {
-                    showStatus('file-status', `[${data.files.length} ITEMS FOUND]`, 'success');
+                    showStatus('file-status', `${data.files.length} items`, 'success');
                     fileList.innerHTML = data.files.map(f => `
                         <div class="file-item ${f.is_dir ? 'dir' : 'file'}" onclick="handleFileClick('${f.path}', ${f.is_dir})">
-                            ${f.is_dir ? '📁 [DIR]' : '📄 [FILE]'} ${f.name}
+                            <span class="file-item-icon">${f.is_dir ? '📁' : '📄'}</span>
+                            <span>${f.name}</span>
                         </div>
                     `).join('');
                 } else {
-                    showStatus('file-status', 'ERROR: ' + data.error, 'error');
-                    fileList.innerHTML = `<div style="padding: 10px; color: #ff0000;">[ERROR] ${data.error}</div>`;
+                    showStatus('file-status', 'Error: ' + data.error, 'error');
                 }
                 fileList.style.display = 'block';
             } catch (err) {
-                showStatus('file-status', 'NETWORK ERROR: ' + err.message, 'error');
+                showStatus('file-status', 'Network error: ' + err.message, 'error');
             }
         }
 
@@ -674,11 +707,11 @@
         async function readFile() {
             const path = document.getElementById('read-path').value.trim();
             if (!path) {
-                alert('[ERROR] Please enter a file path');
+                alert('Please enter a file path');
                 return;
             }
 
-            showStatus('read-status', 'READING FILE...', 'loading');
+            showStatus('read-status', 'Reading...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/file/read', {
@@ -691,17 +724,16 @@
                 const output = document.getElementById('read-output');
                 
                 if (data.status === 'success') {
-                    showStatus('read-status', 'FILE READ SUCCESSFULLY', 'success');
-                    output.innerHTML = `<span class="cmd-prefix">[FILE: ${path}]</span>\n\n${data.content || '(empty file)'}`;
+                    showStatus('read-status', 'File loaded!', 'success');
+                    output.innerHTML = data.content || '(empty file)';
                 } else {
-                    showStatus('read-status', 'ERROR: ' + data.error, 'error');
-                    output.innerHTML = `<span style="color: #ff0000;">[ERROR] ${data.error}</span>`;
-                    output.classList.remove('success');
+                    showStatus('read-status', 'Error: ' + data.error, 'error');
+                    output.innerHTML = `Error: ${data.error}`;
                     output.classList.add('error');
                 }
                 output.style.display = 'block';
             } catch (err) {
-                showStatus('read-status', 'NETWORK ERROR: ' + err.message, 'error');
+                showStatus('read-status', 'Network error: ' + err.message, 'error');
             }
         }
 
@@ -710,11 +742,11 @@
             const content = document.getElementById('write-content').value;
             
             if (!path) {
-                alert('[ERROR] Please enter a file path');
+                alert('Please enter a file path');
                 return;
             }
 
-            showStatus('write-status', 'SAVING FILE...', 'loading');
+            showStatus('write-status', 'Saving...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/file/write', {
@@ -726,19 +758,19 @@
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    showStatus('write-status', 'FILE SAVED SUCCESSFULLY', 'success');
+                    showStatus('write-status', 'File saved!', 'success');
                     document.getElementById('write-path').value = '';
                     document.getElementById('write-content').value = '';
                 } else {
-                    showStatus('write-status', 'ERROR: ' + data.error, 'error');
+                    showStatus('write-status', 'Error: ' + data.error, 'error');
                 }
             } catch (err) {
-                showStatus('write-status', 'NETWORK ERROR: ' + err.message, 'error');
+                showStatus('write-status', 'Network error: ' + err.message, 'error');
             }
         }
 
         async function getSystemInfo() {
-            showStatus('info-status', 'RETRIEVING SYSTEM DATA...', 'loading');
+            showStatus('info-status', 'Loading...', 'loading');
             
             try {
                 const response = await fetch(API_BASE + '/info');
@@ -746,48 +778,24 @@
                 const output = document.getElementById('info-output');
                 
                 if (data.status === 'success') {
-                    showStatus('info-status', 'SYSTEM INFO RETRIEVED', 'success');
-                    output.innerHTML = `[SYSTEM INFORMATION]\n\nOS: ${data.system}\nHOME: ${data.home}\nWORKDIR: ${data.current_dir}\nPYTHON: ${data.python_version}`;
+                    showStatus('info-status', 'System info loaded!', 'success');
+                    output.innerHTML = `System: ${data.system}\n\nHome: ${data.home}\n\nDir: ${data.current_dir}\n\nPython: ${data.python_version}`;
                 } else {
-                    showStatus('info-status', 'ERROR: ' + data.error, 'error');
+                    showStatus('info-status', 'Error: ' + data.error, 'error');
                 }
                 output.style.display = 'block';
             } catch (err) {
-                showStatus('info-status', 'NETWORK ERROR: ' + err.message, 'error');
+                showStatus('info-status', 'Network error: ' + err.message, 'error');
             }
         }
 
-        async function quickCommand(cmd) {
-            document.getElementById('command-input').value = cmd;
-            const output = document.getElementById('quick-output');
-            output.innerHTML = '<span class="spinner"></span> EXECUTING...';
-            output.style.display = 'block';
-            
-            try {
-                const response = await fetch(API_BASE + '/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: cmd })
-                });
-
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    output.innerHTML = `<span class="cmd-prefix">[OUTPUT]</span>\n$ ${cmd}\n\n${data.output}`;
-                } else {
-                    output.innerHTML = `<span style="color: #ff0000;">[ERROR] ${data.error}</span>`;
-                    output.classList.remove('success');
-                    output.classList.add('error');
-                }
-            } catch (err) {
-                output.innerHTML = `<span style="color: #ff0000;">[ERROR] ${err.message}</span>`;
-                output.classList.remove('success');
-                output.classList.add('error');
-            }
-        }
-
-        document.getElementById('command-input').addEventListener('keypress', (e) => {
+        document.getElementById('command-input')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') executeCommand();
+        });
+
+        // Open Terminal window by default
+        window.addEventListener('load', () => {
+            openWindow('terminal-window');
         });
     </script>
 </body>
