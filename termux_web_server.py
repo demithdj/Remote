@@ -57,7 +57,7 @@ def execute_command():
             shell=True,
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=60
         )
         
         return flask.jsonify({
@@ -70,7 +70,7 @@ def execute_command():
     except subprocess.TimeoutExpired:
         return flask.jsonify({
             'status': 'error',
-            'error': 'Command timed out after 30 seconds'
+            'error': 'Command timed out after 60 seconds'
         }), 408
     except Exception as e:
         return flask.jsonify({
