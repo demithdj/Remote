@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Termux Web Remote Control Server
+Termux Web Remote Control Server - Optimized Version
 Built-in Python only - No external dependencies needed!
 Run: python3 termux_web_server.py
 """
@@ -11,62 +11,83 @@ import json
 import subprocess
 import os
 import sys
-import urllib.parse
-from pathlib import Path
+import threading
+from http import HTTPStatus
 
 HOST = '0.0.0.0'
 PORT = 5000
 
-class RequestHandler(http.server.SimpleHTTPRequestHandler):
-    """Handle HTTP requests"""
+# Cache for static HTML
+CACHED_HTML = None
+
+class OptimizedRequestHandler(http.server.BaseHTTPRequestHandler):
+    """Optimized HTTP request handler"""
+    
+    def log_message(self, format, *args):
+        """Suppress logging for cleaner output"""
+        pass
     
     def do_GET(self):
         """Handle GET requests"""
-        if self.path == '/':
+        path = self.path.split('?')[0]  # Remove query string
+        
+        if path == '/':
             self.serve_html()
-        elif self.path == '/api/info':
+        elif path == '/api/info':
             self.api_info()
         else:
-            self.send_404()
+            self.send_response(404)
+            self.end_headers()
     
     def do_POST(self):
         """Handle POST requests"""
-        content_length = int(self.headers.get('Content-Length', 0))
-        body = self.rfile.read(content_length).decode('utf-8')
-        
         try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length > 1000000:  # 1MB limit
+                self.send_error_json('Payload too large')
+                return
+            
+            body = self.rfile.read(content_length).decode('utf-8')
             data = json.loads(body)
         except:
-            self.send_error_json('Invalid JSON')
+            self.send_error_json('Invalid request')
             return
         
-        if self.path == '/api/execute':
+        path = self.path.split('?')[0]
+        
+        if path == '/api/execute':
             self.api_execute(data)
-        elif self.path == '/api/file/read':
+        elif path == '/api/file/read':
             self.api_read(data)
-        elif self.path == '/api/file/write':
+        elif path == '/api/file/write':
             self.api_write(data)
-        elif self.path == '/api/file/list':
+        elif path == '/api/file/list':
             self.api_list(data)
         else:
-            self.send_404()
+            self.send_response(404)
+            self.end_headers()
     
     def serve_html(self):
-        """Serve the HTML file"""
-        html = self.get_html_content()
+        """Serve cached HTML file"""
+        global CACHED_HTML
+        if CACHED_HTML is None:
+            CACHED_HTML = self.get_html_content()
+        
+        html = CACHED_HTML.encode('utf-8')
         self.send_response(200)
         self.send_header('Content-type', 'text/html; charset=utf-8')
-        self.send_header('Content-Length', len(html.encode()))
-        self.send_header('Cache-Control', 'public, max-age=3600')
+        self.send_header('Content-Length', len(html))
+        self.send_header('Cache-Control', 'max-age=86400')
+        self.send_header('Connection', 'keep-alive')
         self.end_headers()
-        self.wfile.write(html.encode())
+        self.wfile.write(html)
     
     def api_execute(self, data):
         """Execute shell command"""
         command = data.get('command', '')
         
-        if not command:
-            self.send_error_json('No command provided')
+        if not command or len(command) > 1000:
+            self.send_error_json('Invalid command')
             return
         
         try:
@@ -75,33 +96,35 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=10
             )
             
             response = {
                 'status': 'success',
-                'command': command,
-                'output': result.stdout,
-                'error': result.stderr,
-                'returncode': result.returncode
+                'output': result.stdout[:50000],  # Limit output
+                'error': result.stderr[:10000]
             }
             self.send_json(response)
         except subprocess.TimeoutExpired:
             self.send_error_json('Command timeout')
         except Exception as e:
-            self.send_error_json(str(e))
+            self.send_error_json('Command error')
     
     def api_read(self, data):
         """Read file"""
         filepath = data.get('path', '')
         
-        if not filepath:
-            self.send_error_json('No path provided')
+        if not filepath or len(filepath) > 500:
+            self.send_error_json('Invalid path')
             return
         
         try:
             if not os.path.exists(filepath):
-                self.send_error_json(f'File not found: {filepath}')
+                self.send_error_json('File not found')
+                return
+            
+            if os.path.getsize(filepath) > 1000000:  # 1MB limit
+                self.send_error_json('File too large')
                 return
             
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -109,493 +132,178 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             
             response = {
                 'status': 'success',
-                'path': filepath,
                 'content': content
             }
             self.send_json(response)
-        except Exception as e:
-            self.send_error_json(str(e))
+        except Exception:
+            self.send_error_json('Read error')
     
     def api_write(self, data):
         """Write file"""
         filepath = data.get('path', '')
         content = data.get('content', '')
         
-        if not filepath:
-            self.send_error_json('No path provided')
+        if not filepath or len(filepath) > 500:
+            self.send_error_json('Invalid path')
             return
         
         try:
-            os.makedirs(os.path.dirname(filepath) or '.', exist_ok=True)
+            dirname = os.path.dirname(filepath)
+            if dirname:
+                os.makedirs(dirname, exist_ok=True)
             
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             
-            response = {
-                'status': 'success',
-                'path': filepath,
-                'message': 'File saved'
-            }
-            self.send_json(response)
-        except Exception as e:
-            self.send_error_json(str(e))
+            self.send_json({'status': 'success'})
+        except Exception:
+            self.send_error_json('Write error')
     
     def api_list(self, data):
         """List files in directory"""
         dirpath = data.get('path', '/sdcard')
         
+        if not dirpath or len(dirpath) > 500:
+            self.send_error_json('Invalid path')
+            return
+        
         try:
             if not os.path.isdir(dirpath):
-                self.send_error_json(f'Directory not found: {dirpath}')
+                self.send_error_json('Directory not found')
                 return
             
             files = []
-            for item in os.listdir(dirpath):
+            items = os.listdir(dirpath)[:200]  # Limit to 200 items
+            
+            for item in items:
                 filepath = os.path.join(dirpath, item)
                 is_dir = os.path.isdir(filepath)
-                try:
-                    size = os.path.getsize(filepath) if not is_dir else 0
-                except:
-                    size = 0
-                
                 files.append({
                     'name': item,
                     'path': filepath,
-                    'is_dir': is_dir,
-                    'size': size
+                    'is_dir': is_dir
                 })
             
             files.sort(key=lambda x: (not x['is_dir'], x['name']))
             
             response = {
                 'status': 'success',
-                'path': dirpath,
                 'files': files
             }
             self.send_json(response)
-        except Exception as e:
-            self.send_error_json(str(e))
+        except Exception:
+            self.send_error_json('List error')
     
     def api_info(self):
         """Get system info"""
         try:
-            result = subprocess.run('uname -a', shell=True, capture_output=True, text=True)
-            pwd = subprocess.run('pwd', shell=True, capture_output=True, text=True)
-            home = os.path.expanduser('~')
+            result = subprocess.run('uname -a', shell=True, capture_output=True, text=True, timeout=5)
             
             response = {
                 'status': 'success',
-                'system': result.stdout.strip(),
-                'home': home,
-                'current_dir': pwd.stdout.strip(),
-                'python_version': sys.version
+                'system': result.stdout.strip()
             }
             self.send_json(response)
-        except Exception as e:
-            self.send_error_json(str(e))
+        except Exception:
+            self.send_error_json('Info error')
     
     def send_json(self, data):
         """Send JSON response"""
-        response = json.dumps(data).encode('utf-8')
+        response = json.dumps(data, separators=(',', ':')).encode('utf-8')
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.send_header('Content-Length', len(response))
         self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Connection', 'keep-alive')
         self.end_headers()
         self.wfile.write(response)
     
     def send_error_json(self, message):
         """Send error JSON response"""
-        response = json.dumps({
-            'status': 'error',
-            'error': message
-        }).encode('utf-8')
+        response = json.dumps({'status': 'error', 'error': message}, separators=(',', ':')).encode('utf-8')
         self.send_response(400)
         self.send_header('Content-type', 'application/json')
         self.send_header('Content-Length', len(response))
         self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Connection', 'keep-alive')
         self.end_headers()
         self.wfile.write(response)
     
-    def send_404(self):
-        """Send 404 error"""
-        self.send_response(404)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(b'404 Not Found')
-    
     def get_html_content(self):
-        """Return HTML content"""
+        """Return minimal HTML - removed unnecessary features"""
         return '''<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Termux - Terminal Emulator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
-
-        body {
-            font-family: 'Roboto Mono', monospace;
-            background: #000;
-            color: #fff;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            padding: 12px 16px;
-            border-bottom: 1px solid #0f3460;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .app-icon {
-            font-size: 1.5em;
-        }
-
-        .app-name {
-            font-weight: 700;
-            font-size: 1.1em;
-            color: #00ff00;
-            text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
-        }
-
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #000;
-            overflow: hidden;
-        }
-
-        .terminal-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px 16px;
-            font-size: 0.95em;
-            line-height: 1.6;
-            color: #00ff00;
-        }
-
-        .terminal-line {
-            margin-bottom: 8px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .terminal-prompt {
-            color: #00ffff;
-            font-weight: 500;
-            margin-right: 8px;
-        }
-
-        .terminal-command {
-            color: #00ff00;
-        }
-
-        .terminal-output {
-            color: #aaa;
-        }
-
-        .input-area {
-            background: #0a0a0a;
-            border-top: 1px solid #0f3460;
-            padding: 12px 16px;
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .prompt {
-            color: #00ffff;
-            font-weight: 500;
-            flex-shrink: 0;
-        }
-
-        .input-wrapper {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            background: #1a1a2e;
-            border: 1px solid #0f3460;
-            border-radius: 4px;
-            padding: 8px 12px;
-        }
-
-        .input-wrapper:focus-within {
-            border-color: #00ff00;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
-        }
-
-        .input-wrapper input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #00ff00;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.95em;
-            outline: none;
-            caret-color: #00ff00;
-        }
-
-        .send-btn {
-            background: linear-gradient(135deg, #00ff00 0%, #00aa00 100%);
-            border: none;
-            color: #000;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-        }
-
-        .send-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 255, 0, 0.3);
-        }
-
-        .status-bar {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            padding: 8px 16px;
-            border-top: 1px solid #0f3460;
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85em;
-            color: #888;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid rgba(0, 255, 0, 0.3);
-            border-top-color: #00ff00;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #0a0a0a;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #0f3460;
-            border-radius: 5px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Termux</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:monospace;background:#000;color:#0f0;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.h{background:#1a1a2e;padding:8px 16px;border-bottom:1px solid #0f3460;display:flex;gap:12px}
+.h span{color:#0f0;font-weight:bold}
+.m{flex:1;overflow-y:auto;padding:12px;font-size:14px;line-height:1.4}
+.l{margin:6px 0;white-space:pre-wrap;word-wrap:break-word}
+.p{color:#0ff}
+.c{color:#0f0}
+.o{color:#999}
+.e{color:#f44}
+.i{background:#0a0a0a;border-top:1px solid #0f3460;padding:8px 16px;display:flex;gap:8px}
+.i span{color:#0ff;flex-shrink:0}
+.iw{flex:1;background:#1a1a2e;border:1px solid #0f3460;border-radius:3px;padding:6px 10px;display:flex}
+.iw input{flex:1;background:transparent;border:none;color:#0f0;font-family:monospace;outline:none;caret-color:#0f0}
+.sb{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:6px 16px;border-top:1px solid #0f3460;font-size:12px;color:#888;display:flex;justify-content:space-between}
+button{background:#0a0;border:none;color:#000;padding:6px 12px;border-radius:3px;cursor:pointer;font-weight:bold;font-family:monospace}
+button:hover{background:#0f0}
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:#0a0a0a}
+::-webkit-scrollbar-thumb{background:#0f3460}
+</style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <span class="app-icon">█</span>
-            <span class="app-name">TERMUX</span>
-        </div>
-    </div>
-
-    <div class="main">
-        <div class="terminal-content" id="output">
-            <div class="terminal-line">
-                <span style="color: #ffaa00;">Welcome to Termux Remote Terminal</span>
-            </div>
-            <div class="terminal-line">
-                <span style="color: #ffaa00;">Type 'help' for available commands</span>
-            </div>
-        </div>
-
-        <div class="input-area">
-            <span class="prompt">root@termux:~#</span>
-            <div class="input-wrapper">
-                <input 
-                    type="text" 
-                    id="input" 
-                    placeholder="Type command..."
-                    onkeydown="handleKeyDown(event)"
-                    autocomplete="off"
-                />
-            </div>
-            <button class="send-btn" onclick="executeCommand()">Send</button>
-        </div>
-    </div>
-
-    <div class="status-bar">
-        <div>Connected | ~</div>
-        <div id="time">00:00</div>
-    </div>
-
-    <script>
-        const API_BASE = location.protocol + '//' + location.host + '/api';
-        let history = [];
-        let historyIndex = 0;
-
-        window.addEventListener('load', () => {
-            updateTime();
-            setInterval(updateTime, 1000);
-            document.getElementById('input').focus();
-        });
-
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('time').textContent = now.toLocaleTimeString('en-US', { hour12: false }).slice(0, 5);
-        }
-
-        function handleKeyDown(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                executeCommand();
-            } else if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                if (historyIndex < history.length) {
-                    historyIndex++;
-                    document.getElementById('input').value = history[history.length - historyIndex];
-                }
-            } else if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                if (historyIndex > 0) {
-                    historyIndex--;
-                    if (historyIndex === 0) {
-                        document.getElementById('input').value = '';
-                    } else {
-                        document.getElementById('input').value = history[history.length - historyIndex];
-                    }
-                }
-            }
-        }
-
-        async function executeCommand() {
-            const input = document.getElementById('input');
-            const command = input.value.trim();
-            const output = document.getElementById('output');
-
-            if (!command) return;
-
-            if (command === 'clear') {
-                output.innerHTML = '';
-                input.value = '';
-                historyIndex = 0;
-                return;
-            }
-
-            if (command === 'help') {
-                addOutput('', 'Available commands: ls, cd, pwd, mkdir, cat, echo, rm, cp, mv, find, grep, ps, df, du, free, whoami, date, python, pip, git, curl, tar, zip, chmod, chown, clear, help, history');
-                input.value = '';
-                historyIndex = 0;
-                history.push(command);
-                return;
-            }
-
-            addOutput('root@termux:~#', command, 'terminal-command');
-            input.value = '';
-            historyIndex = 0;
-            history.push(command);
-
-            const loadingId = 'loading-' + Date.now();
-            addOutput('', '<span class="spinner"></span> Executing...', '', loadingId);
-
-            try {
-                const response = await fetch(API_BASE + '/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command })
-                });
-
-                const data = await response.json();
-                const loadingEl = document.getElementById(loadingId);
-                if (loadingEl) loadingEl.remove();
-
-                if (data.status === 'success') {
-                    if (data.output) {
-                        addOutput('', data.output, 'terminal-output');
-                    }
-                    if (data.error) {
-                        addOutput('', data.error, 'terminal-output');
-                    }
-                } else {
-                    addOutput('', 'Error: ' + data.error, 'terminal-output');
-                }
-            } catch (err) {
-                const loadingEl = document.getElementById(loadingId);
-                if (loadingEl) loadingEl.remove();
-                addOutput('', 'Network error: ' + err.message, 'terminal-output');
-            }
-        }
-
-        function addOutput(prompt, text, className = '', id = '') {
-            const output = document.getElementById('output');
-            const line = document.createElement('div');
-            line.className = 'terminal-line';
-            if (id) line.id = id;
-
-            if (prompt) {
-                const promptSpan = document.createElement('span');
-                promptSpan.className = 'terminal-prompt';
-                promptSpan.textContent = prompt + ' ';
-                line.appendChild(promptSpan);
-            }
-
-            const textSpan = document.createElement('span');
-            textSpan.className = className;
-            textSpan.innerHTML = text;
-            line.appendChild(textSpan);
-
-            output.appendChild(line);
-            output.scrollTop = output.scrollHeight;
-        }
-    </script>
+<div class="h"><span>█ TERMUX</span></div>
+<div class="m" id="o"></div>
+<div class="i">
+<span>root@termux:~#</span>
+<div class="iw"><input type="text" id="i" placeholder="command..." autocomplete="off" onkeydown="k(event)"></div>
+<button onclick="e()">Send</button>
+</div>
+<div class="sb"><div>Connected</div><div id="t">00:00</div></div>
+<script>
+const API='/api';
+let h=[];
+let x=0;
+setInterval(()=>{let d=new Date();document.getElementById('t').textContent=d.toLocaleTimeString('en-US',{hour12:false}).slice(0,5)},1000);
+function k(e){if(e.key==='Enter'){e.preventDefault();E()}else if(e.key==='ArrowUp'){e.preventDefault();if(x<h.length){x++;document.getElementById('i').value=h[h.length-x]}}else if(e.key==='ArrowDown'){e.preventDefault();if(x>0){x--;document.getElementById('i').value=x===0?'':h[h.length-x]}}}
+function E(){let c=document.getElementById('i').value.trim();if(!c)return;if(c==='clear'){document.getElementById('o').innerHTML='';document.getElementById('i').value='';x=0;return}
+a('root@termux:~# ',c,'c');document.getElementById('i').value='';x=0;h.push(c);fetch(API+'/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:c})}).then(r=>r.json()).then(d=>{if(d.status==='success'){if(d.output)a('',d.output,'o');if(d.error)a('',d.error,'e')}else a('','Error: '+d.error,'e')}).catch(r=>a('','Network error','e'))}
+function a(p,t,c=''){let o=document.getElementById('o');let l=document.createElement('div');l.className='l';if(p){let ps=document.createElement('span');ps.className='p';ps.textContent=p+' ';l.appendChild(ps)}let ts=document.createElement('span');ts.className=c;ts.textContent=t;l.appendChild(ts);o.appendChild(l);o.scrollTop=o.scrollHeight}
+document.getElementById('i').focus();
+a('','Welcome to Termux Remote Terminal','i');
+a('','Type your command above...','i');
+</script>
 </body>
 </html>'''
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("🚀 Termux Web Remote Control Server")
-    print("=" * 60)
-    print()
-    print("✅ Setup complete!")
-    print()
-    print("📱 Open in Chrome:")
+    print("\n" + "="*50)
+    print("🚀 Termux Web Remote - Optimized")
+    print("="*50)
+    print("\n📱 Open in Chrome:")
     print("   http://YOUR_DEVICE_IP:5000")
-    print()
-    print("🔧 To find your IP, run:")
-    print("   ifconfig | grep 'inet '")
-    print()
-    print("⚠️  WARNING: This server is not encrypted.")
-    print("   Use only on trusted networks!")
-    print()
-    print("=" * 60)
-    print()
+    print("\n🔧 Find your IP:")
+    print("   ifconfig | grep 'inet'")
+    print("\n" + "="*50 + "\n")
     
-    Handler = RequestHandler
-    with socketserver.TCPServer((HOST, PORT), Handler) as httpd:
-        print(f"✅ Server running on {HOST}:{PORT}")
-        print("Press Ctrl+C to stop")
-        print()
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\n❌ Server stopped")
-            sys.exit(0)
+    Handler = OptimizedRequestHandler
+    httpd = socketserver.TCPServer((HOST, PORT), Handler)
+    httpd.allow_reuse_address = True
+    
+    print(f"✅ Server running on {HOST}:{PORT}")
+    print("Press Ctrl+C to stop\n")
+    
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n❌ Server stopped")
+        sys.exit(0)
