@@ -15,7 +15,7 @@ import threading
 from http import HTTPStatus
 
 HOST = '0.0.0.0'
-PORT = '8080'
+PORT = 8080
 
 # Cache for static HTML
 CACHED_HTML = None
