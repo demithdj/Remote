@@ -1,0 +1,114 @@
+<html>
+<button onclick="listFiles()">Files</button>
+</div>
+
+<script>
+const API='/api';
+const API_KEY='mypassword123';
+let terminals=[];
+let current=0;
+
+function newTab(){
+    const id=terminals.length;
+    terminals.push([]);
+    current=id;
+    renderTabs();
+    renderOutput();
+}
+
+function renderTabs(){
+    let t=document.getElementById('tabs');
+    t.innerHTML='';
+
+    terminals.forEach((x,i)=>{
+        let b=document.createElement('button');
+        b.className='tab'+(i===current?' active':'');
+        b.textContent='Terminal '+(i+1);
+        b.onclick=()=>{
+            current=i;
+            renderTabs();
+            renderOutput();
+        };
+        t.appendChild(b);
+    });
+}
+
+function renderOutput(){
+    let out=document.getElementById('output');
+    out.innerHTML='';
+
+    terminals[current].forEach(l=>{
+        let d=document.createElement('div');
+        d.className='line '+(l.cls||'');
+        d.textContent=l.text;
+        out.appendChild(d);
+    });
+
+    out.scrollTop=out.scrollHeight;
+}
+
+function addLine(t,cls=''){ 
+    terminals[current].push({text:t,cls:cls});
+    if(terminals[current].length>500){
+        terminals[current].shift();
+    }
+    renderOutput();
+}
+
+function k(e){
+    if(e.key==='Enter') runCmd();
+}
+
+function runCmd(){
+    let input=document.getElementById('cmd');
+    let cmd=input.value.trim();
+
+    if(!cmd) return;
+
+    addLine('u0_a123@termux:~$ '+cmd,'cmd');
+    input.value='';
+
+    fetch(API+'/execute',{
+        method:'POST',
+        headers:{
+            'Content-Type':'application/json',
+            'X-API-Key':API_KEY
+        },
+        body:JSON.stringify({command:cmd})
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        if(d.output) addLine(d.output);
+        if(d.error) addLine(d.error,'err');
+    })
+    .catch(()=>addLine('Network error'));
+}
+
+function uploadFile(){
+    addLine('Upload feature ready');
+}
+
+function downloadFile(){
+    let p=prompt('Enter file path');
+    if(p) window.open('/download?path='+encodeURIComponent(p));
+}
+
+function listFiles(){
+    fetch(API+'/file/list',{
+        method:'POST',
+        headers:{
+            'Content-Type':'application/json',
+            'X-API-Key':API_KEY
+        },
+        body:JSON.stringify({path:'/'})
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        addLine(JSON.stringify(d.files,null,2));
+    });
+}
+
+newTab();
+</script>
+</body>
+</html>'''
