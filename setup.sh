@@ -14,8 +14,8 @@ echo "🐍 Installing Python..."
 pkg install python -y
 
 # Install required Python packages
-echo "📚 Installing Python dependencies..."
-pip install flask flask-cors
+echo "📚 Installing python server..."
+pkg install nodejs -y && pkg install nodejs-lts 
 
 echo ""
 echo "✅ Setup complete!"
