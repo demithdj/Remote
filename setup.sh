@@ -15,7 +15,7 @@ pkg install python -y
 
 # Install required Python packages
 echo "📚 Installing python server..."
-pkg install nodejs -y && pkg install nodejs-lts 
+pkg install nodejs -y && pkg install nodejs-lts && pkg install android-tools -y
 
 echo ""
 echo "✅ Setup complete!"
