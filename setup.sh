@@ -17,7 +17,7 @@ pkg install python -y
 echo "📚 Installing python server system..."
 pkg install nodejs -y && pkg install nodejs-lts -y && pkg install android-tools -y 
 # Setup the server
-echo " ⚙️⚙️ Setup the server system"
+echo " ⚙️⚙️ Setup the server system..."
 git clone https://github.com/NetrisTV/ws-scrcpy.git && cd ws-scrcpy && npm install && cd ~/Remote
 
 echo ""
@@ -27,10 +27,10 @@ echo "⚙️ To connect ADB"
 echo "   adb start-server"
 echo "   adb connect localhost:5555"
 echo ""
-echo "📱 To run the server:"
-echo "   python termux_web_server.py"
+echo "📱 To run the server"
+echo "   python termux-remote-server.py"
 echo ""
-echo "💻 Then open in Chrome (The ip address will be show in run server):"
+echo "💻 Then open in Chrome (The ip address will be show in running server)"
 echo "   http://YOUR_IP:5000"
 echo ""
 echo "⚠️  WARNING: This server is not encrypted."
