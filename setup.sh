@@ -14,11 +14,12 @@ echo "📚 Installing python server system..."
 pkg install nodejs -y && pkg install nodejs-lts -y && pkg install android-tools -y 
 # Setup the server
 echo " ⚙️⚙️ Setup the server system..."
-npm init -y && npm install
+npm init -y && npm install express ws -y && npm install -y
 
 echo ""
 echo "✅ Setup complete!"
 echo ""
+echo "🔗 Connect to adb"
 echo "   adb connect localhost:5555"
 echo ""
 echo "📱 To run the server"
