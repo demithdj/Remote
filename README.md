@@ -18,28 +18,31 @@ A powerful web-based remote control interface for Termux that runs directly in G
 
 ```bash
 cd /sdcard/Download  # Or any directory you prefer
-git clone https://github.com/demithdj/Remote-.git
-cd Remote-
+git clone https://github.com/demithdj/Remote.git
+cd Remote
 bash setup.sh
 ```
 
 Or install manually:
 
 ```bash
-pkg install python
-pip install flask flask-cors
+pkg install nodejs
+npm install express ws compression
 ```
 
 ### Step 2: Start the Server
 
 ```bash
-python3 termux_web_server.py
+node Termux_Remote_Server.js
 ```
 
 You should see:
 ```
-🚀 Termux Web Remote Control Server
-📱 Open in Chrome: http://YOUR_DEVICE_IP:5000
+=================================
+TERMUX REMOTE SERVER - PRO VERSION
+=================================
+Local Network IP (Mobile/WiFi):
+http://YOUR_DEVICE_IP:8080
 ```
 
 ### Step 3: Find Your Device IP
@@ -59,8 +62,8 @@ Look for something like: `192.168.x.x` or `10.0.x.x`
 ### Step 4: Open in Chrome
 
 1. Open Google Chrome on another device
-2. Go to: `http://YOUR_DEVICE_IP:5000`
-3. Start controlling!
+2. Go to: `http://YOUR_DEVICE_IP:8080`
+3. Create an account and start controlling!
 
 ## 💻 Interface Sections
 
@@ -85,40 +88,36 @@ Look for something like: `192.168.x.x` or `10.0.x.x`
 - Edit existing files
 - Perfect for configs and scripts
 
-### ⚡ Quick Commands
+### 🔌 Special Commands
 One-click execution:
-- `ls -la` - List files
-- `pwd` - Current directory
-- `df -h` - Disk usage
-- `free -h` - Memory info
-- `whoami` - Current user
+- `download::PATH` - Download a file
+- `screen::on` - Open screen stream
+- `screen::off` - Close screen stream
+- `battery` - Battery status
+- `storage` - Storage info
+- `ps` - List processes
+- `myip` - Check public IP
 
 ### ℹ️ System Information
 - View OS details
-- Check Python version
-- See home directory
+- Check Node.js version
+- See device information
 
 ## 📋 Usage Examples
 
-### Execute Python Script
+### Execute Shell Command
 ```
-Command: python3 /sdcard/script.py
-```
-
-### Install Package
-```
-Command: pip install requests
+Command: ls -la /sdcard
 ```
 
 ### Check Device Storage
 ```
-Command: df -h
+Command: storage
 ```
 
-### View File Contents
+### View Battery Status
 ```
-Path: /sdcard/config.txt
-→ Read File
+Command: battery
 ```
 
 ### Create New Script
@@ -127,6 +126,11 @@ Path: /sdcard/myscript.sh
 Content: #!/bin/bash
 echo "Hello from Termux!"
 → Write File
+```
+
+### Download a File
+```
+Command: download::/sdcard/myfile.txt
 ```
 
 ## 🔒 Security Considerations
@@ -140,31 +144,25 @@ echo "Hello from Termux!"
 
 ### For Production Use:
 
-Add HTTPS support by installing Flask-TLS:
-
-```bash
-pip install pyopenssl
-```
-
-Then modify `termux_web_server.py` to use SSL certificates.
+Add HTTPS support by installing SSL certificates and modifying the server code to use `https` instead of `http`.
 
 ## 🛠️ Advanced Configuration
 
 ### Change Port
 
-Edit `termux_web_server.py`:
+Edit `Termux_Remote_Server.js`:
 
-```python
-PORT = 8080  # Change to your preferred port
+```javascript
+const PORT = 8080;  // Change to your preferred port
 ```
 
 ### Run on Startup
 
-Create a script in `/data/data/com.termux/files/home/.bashrc`:
+Add to `/data/data/com.termux/files/home/.bashrc`:
 
 ```bash
 # Start web server
-python3 ~/remote_control/termux_web_server.py &
+node ~/remote_control/Termux_Remote_Server.js &
 ```
 
 ### Run as Service (Advanced)
@@ -173,8 +171,8 @@ Use `termux-services` for background execution.
 
 ## 📱 Using on Mobile
 
-1. On your Termux device: `python3 termux_web_server.py`
-2. On your Android phone's Chrome: `http://DEVICE_IP:5000`
+1. On your Termux device: `node Termux_Remote_Server.js`
+2. On your Android phone's Chrome: `http://DEVICE_IP:8080`
 3. You can now control Termux from your phone!
 
 ## 🐛 Troubleshooting
@@ -185,37 +183,32 @@ Use `termux-services` for background execution.
 - Both devices must be on same network
 
 ### "Port already in use"
-- Change PORT in `termux_web_server.py`
-- Or kill existing process: `pkill -f termux_web_server`
+- Change PORT in `Termux_Remote_Server.js`
+- Or kill existing process: `pkill -f Termux_Remote_Server`
 
-### "Command timeout"
-- Long-running commands may timeout after 30 seconds
-- Modify timeout in `termux_web_server.py`:
-
-```python
-timeout=60  # Increase to 60 seconds
-```
+### "Cannot GET /"
+- Make sure you're using port 8080: `http://YOUR_IP:8080`
+- Check server is still running
 
 ### Server won't start
-- Check Python is installed: `python3 --version`
-- Check Flask: `pip install flask flask-cors`
+- Check Node.js is installed: `node --version`
+- Check npm packages: `npm install express ws compression`
 - Check for error messages in terminal
 
 ## 📁 File Structure
 
 ```
-Remote-/
-├── termux_web_server.py    # Main Flask server
-├── index.html              # Web interface
-├── setup.sh               # Setup script
-└── README.md              # This file
+Remote/
+├── Termux_Remote_Server.js    # Main Express server
+├── setup.sh                   # Setup script
+└── README.md                  # This file
 ```
 
 ## 🎯 Use Cases
 
 - 🤖 Remote automation
 - 📊 Server management
-- ��� Development & debugging
+- 🔧 Development & debugging
 - 📁 File operations
 - 🧪 Testing scripts
 - 📝 Editing configs
@@ -224,8 +217,8 @@ Remote-/
 ## 🔗 Related Resources
 
 - [Termux Documentation](https://wiki.termux.com/)
-- [Flask Documentation](https://flask.palletsprojects.com/)
-- [Python Subprocess](https://docs.python.org/3/library/subprocess.html)
+- [Express.js Documentation](https://expressjs.com/)
+- [Node.js Child Process](https://nodejs.org/api/child_process.html)
 
 ## 📄 License
 
