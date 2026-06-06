@@ -14,7 +14,7 @@ echo "📚 Installing python server system..."
 pkg install nodejs -y && pkg install nodejs-lts -y && pkg install android-tools -y 
 # Setup the server
 echo " ⚙️⚙️ Setup the server system..."
-npm init -y && npm install express ws compression -y && npm install -y
+npm init -y && npm install express ws compression && npm install -y
 
 echo ""
 echo "✅ Setup complete!"
