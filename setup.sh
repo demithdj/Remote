@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 
 # Termux Web Remote Control Setup Script
 echo "🚀 Termux Web Remote Control Setup"
@@ -9,12 +9,15 @@ echo ""
 echo "📦 Updating packages..."
 pkg update -y && pkg upgrade -y
 
-# Install required Python packages
-echo "📚 Installing python server system..."
-pkg install nodejs -y && pkg install nodejs-lts -y && pkg install android-tools -y 
+# Install required packages
+echo "📚 Installing required packages..."
+pkg install nodejs -y
+pkg install android-tools -y
+
 # Setup the server
-echo " ⚙️⚙️ Setup the server system..."
-npm init -y && npm install express ws compression && npm install -y
+echo "⚙️ Setting up npm dependencies..."
+npm init -y
+npm install express ws compression
 
 echo ""
 echo "✅ Setup complete!"
@@ -25,8 +28,8 @@ echo ""
 echo "📱 To run the server"
 echo "   node Termux_Remote_Server.js"
 echo ""
-echo "💻 Then open in Chrome (The ip address will be show in running server)"
-echo "   https://YOUR_IP:8080"
+echo "💻 Then open in Chrome (The IP address will be shown in running server)"
+echo "   http://YOUR_IP:8080"
 echo ""
 echo "⚠️  WARNING: This server is not encrypted."
 echo "   Use only on trusted networks!"
