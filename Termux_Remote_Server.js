@@ -14,8 +14,16 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 // Gzip Compression සක්‍රීය කිරීම (Website එක වේගයෙන් Load වීමට)
-app.use(compression({ filter: (req, res) => { if (req.headers['x-no-compression']) return false; return compression.filter(req, res); } }));
-app.use(express.json());
+app.use(compression({ 
+    level: 9,
+    threshold: 1024,
+    filter: (req, res) => { 
+        if (req.headers['x-no-compression']) return false; 
+        return compression.filter(req, res); 
+    } 
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 const PORT = 8080;
 const MAX_OUTPUT = 50000;
@@ -90,7 +98,10 @@ function authMiddleware(req, res, next) {
 }
 
 // --- API Routes ---
-app.get('/api/check_setup', (req, res) => res.json({ exists: fs.existsSync(USERS_FILE) }));
+app.get('/api/check_setup', (req, res) => {
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json({ exists: fs.existsSync(USERS_FILE) });
+});
 
 app.post('/api/create_account', (req, res) => {
     const { username, password } = req.body;
@@ -352,6 +363,7 @@ app.get('/tap', (req, res) => {
 
 // --- Main UI HTML (Minified & Compressed) ---
 app.get('/', (req, res) => {
+    res.set('Cache-Control', 'public, max-age=3600');
     res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
     res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Termux Remote</title><style>body{background:#000;color:#0f0;font-family:monospace;margin:0;padding:20px}.container{max-width:1200px;margin:0 auto}.header{text-align:center;padding:20px 0;border-bottom:2px solid #0f0}.header h1{margin:0;color:#0f0}.login-form,.main-ui{display:none}.login-form.active,.main-ui.active{display:block}.form-group{margin:10px 0}input,textarea,select{background:#111;color:#0f0;border:1px solid #0f0;padding:8px;width:100%;box-sizing:border-box}button{background:#0f0;color:#000;border:none;padding:10px 20px;cursor:pointer;font-weight:bold;margin:5px 5px 5px 0}button:hover{background:#0a0}.section{margin:20px 0;padding:15px;border:1px solid #0f0}.output{background:#111;padding:10px;margin:10px 0;max-height:400px;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;border:1px solid #0f0}.file-list{list-style:none;padding:0}.file-item{padding:5px;cursor:pointer}.file-item:hover{background:#222}.error{color:#f00}.success{color:#0f0}</style></head><body><div class="container"><div class="header"><h1>🔧 Termux Remote Control</h1></div><div class="login-form active" id="loginForm"><div class="section"><h2>Authentication</h2><div class="form-group"><label>Username:</label><input type="text" id="username" placeholder="Enter username"></div><div class="form-group"><label>Password:</label><input type="password" id="password" placeholder="Enter password"></div><button onclick="login()">Login</button><button onclick="createAccount()">Create Account</button><div id="authMessage" style="margin-top:10px;"></div></div></div><div class="main-ui" id="mainUI"><button onclick="logout()">Logout</button><div class="section"><h2>⚙️ Execute Command</h2><input type="text" id="command" placeholder="Enter command (e.g., ls -la /sdcard)"><button onclick="executeCommand()">Execute</button><div id="cmdOutput" class="output"></div></div><div class="section"><h2>📁 File Manager</h2><input type="text" id="dirPath" value="/sdcard" placeholder="Directory path"><button onclick="listFiles()">List Files</button><div id="fileList" class="output"></div></div><div class="section"><h2>📖 Read File</h2><input type="text" id="readPath" placeholder="File path"><button onclick="readFile()">Read</button><div id="readOutput" class="output"></div></div><div class="section"><h2>✏️ Write File</h2><input type="text" id="writePath" placeholder="File path"><textarea id="writeContent" placeholder="File content" rows="5"></textarea><button onclick="writeFile()">Write</button><div id="writeMessage" style="margin-top:10px;"></div></div><div class="section"><h2>ℹ️ System Info</h2><button onclick="getSystemInfo()">Get Info</button><div id="sysInfo" class="output"></div></div></div></div><script>let token=localStorage.getItem('token');function showAuth(show){document.getElementById('loginForm').className=show?'login-form active':'login-form';document.getElementById('mainUI').className=show?'main-ui':'main-ui active'}function login(){const username=document.getElementById('username').value;const password=document.getElementById('password').value;fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})}).then(r=>r.json()).then(data=>{if(data.status==='success'){token=data.token;localStorage.setItem('token',token);showAuth(false);document.getElementById('authMessage').innerHTML=''}else{document.getElementById('authMessage').innerHTML='<span class="error">'+data.error+'</span>'}})}function createAccount(){const username=document.getElementById('username').value;const password=document.getElementById('password').value;fetch('/api/create_account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})}).then(r=>r.json()).then(data=>{if(data.status==='success'){token=data.token;localStorage.setItem('token',token);showAuth(false);document.getElementById('authMessage').innerHTML=''}else{document.getElementById('authMessage').innerHTML='<span class="error">'+data.error+'</span>'}})}function logout(){localStorage.removeItem('token');token=null;showAuth(true);document.getElementById('username').value='';document.getElementById('password').value=''}function executeCommand(){const command=document.getElementById('command').value;fetch('/api/execute',{method:'POST',headers:{'Content-Type':'application/json','Authorization':token},body:JSON.stringify({command})}).then(r=>r.json()).then(data=>{let output=data.stdout+(data.stderr?'\\nERROR: '+data.stderr:'');document.getElementById('cmdOutput').innerHTML=output||'No output'})}function listFiles(){const path=document.getElementById('dirPath').value;fetch('/api/list',{method:'POST',headers:{'Content-Type':'application/json','Authorization':token},body:JSON.stringify({path})}).then(r=>r.json()).then(data=>{if(data.files){let html='<ul class="file-list">';data.files.forEach(f=>{html+='<li class="file-item" onclick="selectFile(\''+f.path+'\')">'+（f.dir?'📁':'📄')+' '+f.name+' ('+f.size+'B)</li>'});html+='</ul>';document.getElementById('fileList').innerHTML=html}})}function readFile(){const path=document.getElementById('readPath').value;fetch('/api/read',{method:'POST',headers:{'Content-Type':'application/json','Authorization':token},body:JSON.stringify({path})}).then(r=>r.json()).then(data=>{document.getElementById('readOutput').innerHTML=data.content||data.error||'No content'})}function writeFile(){const path=document.getElementById('writePath').value;const content=document.getElementById('writeContent').value;fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','Authorization':token},body:JSON.stringify({path,content})}).then(r=>r.json()).then(data=>{document.getElementById('writeMessage').innerHTML=data.status==='success'?'<span class="success">✓ File written successfully</span>':'<span class="error">'+data.error+'</span>'})}function getSystemInfo(){fetch('/api/info',{headers:{'Authorization':token}}).then(r=>r.json()).then(data=>{document.getElementById('sysInfo').innerHTML=data.system||'Unable to fetch info'})}function selectFile(path){document.getElementById('readPath').value=path}if(!token){showAuth(true)}else{showAuth(false)}</script></body></html>`);
 });
@@ -360,13 +372,15 @@ app.get('/', (req, res) => {
 app.get('/screen-ui', (req, res) => {
     let screenRes = '1080x2400';
     try { const r = execSync('adb shell wm size').toString(); if(r.includes('Physical size:')) screenRes = r.split('Physical size:')[1].trim(); } catch {}
+    res.set('Cache-Control', 'public, max-age=1800');
     res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
-    res.end(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Live Screen</title><style>body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}canvas{max-width:100%;max-height:100%;border:2px solid #0f0}</style></head><body><canvas id="screen"></canvas><script>const canvas=document.getElementById('screen');const ctx=canvas.getContext('2d');const token=new URLSearchParams(window.location.search).get('token');const ws=new WebSocket('ws://'+window.location.host+'?token='+token);ws.binaryType='arraybuffer';ws.onmessage=e=>{const img=new Image();img.onload=()=>{canvas.width=img.width;canvas.height=img.height;ctx.drawImage(img,0,0)};img.src='data:image/png;base64,'+btoa(String.fromCharCode.apply(null,new Uint8Array(e.data)))}}</script></body></html>`);
+    res.end(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Live Screen</title><style>body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}canvas{max-width:100%;max-height:100%;border:2px solid #0f0}</style></head><body><canvas id="screen"></canvas><script>const canvas=document.getElementById('screen');const ctx=canvas.getContext('2d');const token=new URLSearchParams(window.location.search).get('token');const ws=new WebSocket('ws://'+window.location.host+'?token='+token);ws.binaryType='arraybuffer';ws.onmessage=e=>{const img=new Image();img.onload=()=>{canvas.width=img.width;canvas.height=img.height;ctx.drawImage(img,0,0)};img.src='data:image/png;base64,'+btoa(String.fromCharCode.apply(null,new Uint8Array(e.data)))}</script></body></html>`);
 });
 
 // --- App View HTML ---
 app.get('/app_view', (req, res) => {
     const appName = req.query.name || 'App';
+    res.set('Cache-Control', 'public, max-age=300');
     res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
     res.end(`<!DOCTYPE html><html><head><title>${appName}</title><style>body{background:#000;color:#0f0;font-family:monospace;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}</style></head><body><div>${appName} is running</div></body></html>`);
 });
